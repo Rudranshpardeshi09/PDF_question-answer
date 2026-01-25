@@ -3,15 +3,56 @@ from app.rag.retriever import get_retriever
 from app.services.gemini_llm import generate_text
 
 
+# ✅ ADD THIS HERE (TOP LEVEL)
+def filter_docs_for_question(docs, question: str):
+    question = question.lower()
+
+    if "certification" in question:
+        keywords = [
+            "certificate",
+            "certification",
+            "certified",
+            "udemy",
+            "coursera",
+            "training"
+        ]
+        return [
+            d for d in docs
+            if any(k in d.page_content.lower() for k in keywords)
+        ]
+
+    return docs
+
+
+# ✅ ADD THIS HERE (TOP LEVEL)
+def validate_certifications(answer: str):
+    invalid_terms = [
+        "project",
+        "system",
+        "application",
+        "developed",
+        "implemented"
+    ]
+
+    for term in invalid_terms:
+        if term.lower() in answer.lower():
+            return (
+                "The document does not explicitly list certifications. "
+                "Only formally mentioned certifications can be confirmed."
+            )
+
+    return answer
+
+
+
 def run_rag(question: str, vectorstore):
     """
     Runs RAG using modern LangChain runnable pattern.
     Compatible with LangChain >= 0.1
     """
     retriever = get_retriever(vectorstore)
-    docs = retriever.invoke(question)
 
-    # 1. Retrieve relevant docs
+    # 1️⃣ Retrieve documents
     docs = retriever.invoke(question)
 
     if not docs:
@@ -21,19 +62,35 @@ def run_rag(question: str, vectorstore):
             "sources": []
         }
 
-    # 2. Build context
-    context = "\n\n".join([doc.page_content for doc in docs])
+    # 2️⃣ 🔥 FILTER DOCS BASED ON QUESTION INTENT
+    docs = filter_docs_for_question(docs, question)
 
-    # 3. Format prompt
+    if not docs:
+        return {
+            "answer": (
+                "The document does not explicitly mention this information."
+            ),
+            "pages": [],
+            "sources": []
+        }
+
+    # 3️⃣ Build context ONLY from filtered docs
+    context = "\n\n".join(doc.page_content for doc in docs)
+
+    # 4️⃣ Format prompt
     prompt = RAG_PROMPT.format(
         context=context,
         question=question
     )
 
-    # 4. Call Gemini
-    response =  generate_text(prompt)
+    # 5️⃣ Call Gemini
+    response = generate_text(prompt)
 
-    # 5. Extract metadata
+    # 6️⃣ 🔥 POST-VALIDATION (ONLY FOR CERTIFICATION QUESTIONS)
+    if "certification" in question.lower():
+        response = validate_certifications(response)
+
+    # 7️⃣ Extract metadata
     pages = sorted({
         str(doc.metadata.get("page", "N/A"))
         for doc in docs

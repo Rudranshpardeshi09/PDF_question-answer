@@ -5,7 +5,7 @@ from app.services.rag_service import run_rag
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("/qa/")
 def ask_question(req: QARequest):
     db = load_vectorstore()
     return run_rag(req.question, db)
