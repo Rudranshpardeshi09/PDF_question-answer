@@ -1,0 +1,16 @@
+.env
+__pycache__/
+app/data/vector_db/
+app/data/uploads/
+venv/
+*.pyc   
+.DS_Store
+.idea/
+.vscode/
+logs/
+*.log
+coverage
+htmlcov/
+.ipynb_checkpoints/
+migrations/
+*.sqlite3
