@@ -1,9 +1,36 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.ingestion_service import ingest_pdf
 
-router = APIRouter()
+router = APIRouter(prefix="/ingest", tags=["Document Ingestion"])
 
-@router.post("/ingest/")
-def ingest(file: UploadFile = File(...)):
-    ingest_pdf(file)
-    return {"status": "PDF ingested successfully"}
+@router.post("/")
+async def ingest(file: UploadFile = File(...)):
+    """
+    Upload and index a PDF document.
+    
+    Process:
+    1. Saves PDF temporarily
+    2. Extracts text with page awareness
+    3. Chunks intelligently
+    4. Stores embeddings in FAISS vector store
+    
+    Returns:
+    {
+        "status": "success",
+        "message": "PDF ingested successfully",
+        "filename": "filename.pdf",
+        "pages": <number of pages>
+    }
+    """
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    # Validate file type
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    try:
+        result = ingest_pdf(file)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ingesting PDF: {str(e)}")

@@ -2,25 +2,54 @@ import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 
-export default function MessageBubble({ role, content }) {
+const userBubbleVariants = {
+  initial: { opacity: 0, x: 100, scale: 0.8 },
+  animate: { opacity: 1, x: 0, scale: 1 },
+};
+
+const aiBubbleVariants = {
+  initial: { opacity: 0, x: -100, scale: 0.8 },
+  animate: { opacity: 1, x: 0, scale: 1 },
+};
+
+export default function MessageBubble({ role, content, error }) {
   const isUser = role === "user";
+  const variants = isUser ? userBubbleVariants : aiBubbleVariants;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`max-w-[75%] rounded-xl px-4 py-3 text-sm ${
-        isUser
-          ? "bg-primary text-primary-foreground ml-auto"
-          : "bg-muted"
-      }`}
+      initial="initial"
+      animate="animate"
+      variants={variants}
+      transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
     >
-      {!isUser && (
-        <Badge variant="secondary" className="mb-1">
-          AI
-        </Badge>
-      )}
-      <ReactMarkdown>{content}</ReactMarkdown>
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-md transition-all hover:shadow-lg ${
+          isUser
+            ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white"
+            : error
+              ? "bg-gradient-to-br from-red-50 to-pink-50 text-red-900 border-2 border-red-300"
+              : "bg-gradient-to-br from-gray-50 to-blue-50 text-gray-900 border border-blue-200"
+        }`}
+      >
+        {!isUser && (
+          <Badge
+            className={`mb-2 font-semibold ${
+              error
+                ? "bg-red-500 text-white"
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+            }`}
+          >
+            {error ? "⚠️ System" : "🤖 AI"}
+          </Badge>
+        )}
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown className={isUser ? "text-white" : ""}>
+            {content}
+          </ReactMarkdown>
+        </div>
+      </div>
     </motion.div>
   );
 }

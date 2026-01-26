@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class Source(BaseModel):
     page: int
@@ -7,6 +7,10 @@ class Source(BaseModel):
 
 class QARequest(BaseModel):
     question: str
+    subject: Optional[str] = None
+    unit: Optional[str] = None
+    topic: Optional[str] = None
+    marks: Optional[int] = None
 
 class QAResponse(BaseModel):
     answer: str
