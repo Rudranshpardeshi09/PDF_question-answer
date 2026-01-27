@@ -30,31 +30,47 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem
   }
+
+  .dark body {
+    letter-spacing: 0.015em;
+  }
+
   .dark {
-    --background: 15 20% 8%;
-    --foreground: 0 0% 95%;
-    --card: 15 25% 12%;
-    --card-foreground: 0 0% 95%;
-    --popover: 15 20% 8%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 270 80% 55%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 320 70% 45%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 220 20% 22%;
-    --muted-foreground: 0 0% 70%;
-    --accent: 40 90% 55%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 20% 22%;
-    --input: 220 20% 22%;
-    --ring: 270 80% 55%;
-    --chart-1: 200 100% 50%;
+    /* Premium Black + Neon Green Theme */
+    /* Base surfaces - Pure black with subtle gradients */
+    --background: 0 0% 3%;
+    --foreground: 142 100% 92%;
+
+    --card: 0 0% 6%;
+    --card-foreground: 142 100% 92%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 142 100% 92%;
+
+    /* Neon green brand - Vibrant & Professional */
+    --primary: 142 100% 51%;
+    --primary-foreground: 0 0% 3%;
+
+    --secondary: 142 85% 50%;
+    --secondary-foreground: 0 0% 3%;
+
+    --accent: 142 100% 51%;
+    --accent-foreground: 0 0% 3%;
+
+    /* UI neutrals - Dark gray for contrast */
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 75%;
+
+    --border: 142 100% 40%;
+    --input: 0 0% 10%;
+    --ring: 142 100% 51%;
+
+    /* Charts */
+    --chart-1: 142 100% 51%;
     --chart-2: 160 100% 45%;
-    --chart-3: 30 100% 55%;
-    --chart-4: 280 100% 60%;
-    --chart-5: 340 100% 55%
+    --chart-3: 120 100% 50%;
+    --chart-4: 80 100% 50%;
+    --chart-5: 200 100% 50%;
   }
 }
 
@@ -62,13 +78,85 @@
   * {
     @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Ensure scrolling on all elements */
+  html, body {
+    @apply h-auto;
+  }
+
+  /* Dark mode premium card styling */
+  .dark .bg-card,
+  .dark [class*="bg-gradient"] {
+    @apply bg-gradient-to-br from-gray-900 via-gray-950 to-black;
+  }
+
+  .dark .rounded-xl,
+  .dark .rounded-lg {
+    @apply relative;
+  }
+
+  /* Premium dark mode cards with neon border */
+  .dark .rounded-xl,
+  .dark .rounded-lg {
+    @apply border-emerald-500/30;
+  }
+
+  .dark .hover\:border-emerald-500\/50:hover {
+    @apply border-emerald-500/50;
+  }
+
+  /* Dark mode text improvements */
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4,
+  .dark h5,
+  .dark h6 {
+    @apply text-emerald-400;
+  }
+
+  .dark p {
+    @apply text-gray-300;
+  }
+
+  /* Mobile-first responsive text - Fixed to use standard breakpoints */
+  body {
+    font-size: 14px;
+  }
+
+  @screen sm {
+    body {
+      font-size: 15px;
+    }
+  }
+
+  @screen md {
+    body {
+      font-size: 16px;
+    }
   }
 }
 
 /* Responsive utilities for better mobile support */
 @layer utilities {
+  /* Premium gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-emerald-400 to-emerald-500 bg-clip-text text-transparent;
+  }
+
+  /* Glass morphism effect for premium look */
+  .glass-effect {
+    @apply bg-white/30 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-emerald-500/20;
+  }
+
   /* Ensure touch targets are minimum 44px for mobile */
   @screen sm {
     .touch-target {
@@ -80,23 +168,153 @@
   .scrollbar-thin::-webkit-scrollbar {
     @apply w-1 sm:w-2;
   }
+
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-900;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 dark:bg-gray-600 rounded hover:bg-gray-500 dark:hover:bg-gray-500;
+    @apply bg-gray-100 dark:bg-gray-950;
   }
 
-  /* Mobile-first text sizing helper */
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-emerald-400 dark:bg-emerald-500 rounded hover:bg-emerald-500 dark:hover:bg-emerald-400 transition-colors;
+  }
+
+  /* Responsive text sizing helper */
   .responsive-heading {
     @apply text-lg sm:text-xl md:text-2xl;
   }
-  
+
   .responsive-text {
     @apply text-xs sm:text-sm md:text-base;
   }
 
   .responsive-label {
     @apply text-xs sm:text-sm font-semibold;
+  }
+
+  /* Premium button hover effects */
+  .premium-btn {
+    @apply relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/30;
+  }
+
+  /* Neon glow effect */
+  .neon-glow {
+    @apply shadow-lg shadow-emerald-500/30 dark:shadow-emerald-500/50;
+  }
+
+  /* Mobile responsive text truncation */
+  @screen md {
+    .hidden-mobile {
+      @apply block;
+    }
+  }
+
+  @screen sm {
+    .hidden-mobile {
+      @apply hidden;
+    }
+  }
+
+  /* Container responsiveness */
+  .responsive-container {
+    @apply px-2 sm:px-3 md:px-4 lg:px-6;
+  }
+
+  .responsive-padding {
+    @apply p-2 sm:p-3 md:p-4 lg:p-6;
+  }
+
+  .responsive-gap {
+    @apply gap-2 sm:gap-3 md:gap-4 lg:gap-6;
+  }
+
+  /* Flexible grid for mobile first */
+  .responsive-grid-cols {
+    @apply grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
+  }
+
+  /* Mobile-first font sizes */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl;
+  }
+
+  /* Responsive spacing utilities */
+  .space-responsive-sm {
+    @apply space-y-2 sm:space-y-3 md:space-y-4;
+  }
+
+  .space-responsive-md {
+    @apply space-y-3 sm:space-y-4 md:space-y-6;
+  }
+
+  .space-responsive-lg {
+    @apply space-y-4 sm:space-y-6 md:space-y-8;
+  }
+
+  /* Responsive height utilities */
+  .h-responsive-sm {
+    @apply h-48 sm:h-56 md:h-64;
+  }
+
+  .h-responsive-md {
+    @apply h-64 sm:h-80 md:h-96;
+  }
+
+  .h-responsive-lg {
+    @apply h-96 sm:h-[500px] md:h-screen;
+  }
+
+  /* Ensure scrollable areas work on mobile */
+  .scrollable-area {
+    @apply overflow-y-auto overflow-x-hidden;
+  }
+
+  .scrollable-area::-webkit-scrollbar {
+    @apply w-1 sm:w-2;
+  }
+
+  .scrollable-area::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-950;
+  }
+
+  .scrollable-area::-webkit-scrollbar-thumb {
+    @apply bg-emerald-400 dark:bg-emerald-500 rounded hover:bg-emerald-500 dark:hover:bg-emerald-400;
+  }
+}
+
+/* Neon green dark mode enhancements */
+@layer components {
+  .dark .card-neon {
+    @apply bg-gradient-to-br from-gray-900 via-gray-950 to-black border border-emerald-500/30 shadow-xl shadow-emerald-500/10 hover:border-emerald-500/50 hover:shadow-emerald-500/20 transition-all duration-300;
+  }
+
+  .dark .text-neon {
+    @apply text-emerald-400;
+  }
+
+  .dark .border-neon {
+    @apply border-emerald-500/30;
+  }
+
+  .dark .hover\:border-neon:hover {
+    @apply border-emerald-500/50;
+  }
+
+  .dark .bg-neon-glow {
+    @apply bg-gradient-to-br from-emerald-600/20 to-emerald-700/20 border border-emerald-500/30;
   }
 }

@@ -63,8 +63,10 @@ export default function SyllabusUpload() {
       animate="visible"
       className="w-full"
     >
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-purple-50 dark:from-slate-800 dark:to-slate-900 hover:shadow-xl transition-shadow">
-        <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-700 dark:to-pink-700 text-white rounded-t-lg p-3 sm:p-4">
+      {/* <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-purple-50 dark:from-slate-800 dark:to-slate-900 hover:shadow-xl transition-shadow"> */}
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-purple-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:border dark:border-emerald-500/30 dark:shadow-2xl dark:shadow-emerald-500/10 hover:shadow-xl transition-all duration-300 dark:hover:border-emerald-500/50 dark:hover:shadow-emerald-500/20">
+
+        <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-emerald-600 dark:to-emerald-700 text-white rounded-t-lg p-3 sm:p-4">
           <CardTitle className="text-sm sm:text-base font-semibold flex items-center gap-1 sm:gap-2">
             <span className="text-xl sm:text-2xl">📋</span>
             <span>Upload Syllabus</span>
@@ -93,11 +95,10 @@ export default function SyllabusUpload() {
               />
               <label
                 htmlFor="syllabus-upload"
-                className={`block w-full px-3 py-2 rounded-lg border-2 border-dashed text-center transition-all cursor-pointer text-xs ${
-                  loading
+                className={`block w-full px-3 py-2 rounded-lg border-2 border-dashed text-center transition-all cursor-pointer text-xs ${loading
                     ? "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-700"
                     : "border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-slate-700 hover:border-purple-600 dark:hover:border-purple-400 hover:bg-purple-100 dark:hover:bg-slate-600"
-                }`}
+                  }`}
               >
                 <span className="truncate">
                   {file ? file.name : "Choose PDF or DOCX"}

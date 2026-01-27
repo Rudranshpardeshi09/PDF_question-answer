@@ -12,9 +12,9 @@ const cardVariants = {
 
 const successVariants = {
   initial: { scale: 0, rotate: -180, opacity: 0 },
-  animate: { 
-    scale: 1, 
-    rotate: 0, 
+  animate: {
+    scale: 1,
+    rotate: 0,
     opacity: 1,
     transition: { type: "spring", stiffness: 100, damping: 15 }
   },
@@ -59,8 +59,10 @@ export default function UploadPDF() {
       animate="visible"
       className="h-full w-full"
     >
-      <Card className="h-full flex flex-col shadow-lg border-0 bg-gradient-to-br from-white to-blue-50 hover:shadow-xl transition-shadow">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg p-3 sm:p-4">
+      {/* <Card className="h-full flex flex-col shadow-lg border-0 bg-gradient-to-br from-white to-blue-50 hover:shadow-xl transition-shadow"> */}
+      <Card className="h-full flex flex-col shadow-lg border-0 bg-gradient-to-br from-white to-blue-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:border dark:border-emerald-500/30 dark:shadow-2xl dark:shadow-emerald-500/10 hover:shadow-xl transition-all duration-300 dark:hover:border-emerald-500/50 dark:hover:shadow-emerald-500/20">
+
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-emerald-600 dark:to-emerald-700 text-white rounded-t-lg p-3 sm:p-4">
           <CardTitle className="text-sm sm:text-base font-semibold flex items-center gap-1 sm:gap-2">
             <span className="text-xl sm:text-2xl">📄</span>
             <span>Upload PDF</span>
@@ -68,7 +70,7 @@ export default function UploadPDF() {
         </CardHeader>
 
         <CardContent className="space-y-3 sm:space-y-4 flex-1 flex flex-col p-3 sm:p-5">
-          
+
           {/* FILE INPUT */}
           <div className="space-y-2">
             <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 block">
@@ -85,11 +87,10 @@ export default function UploadPDF() {
               />
               <label
                 htmlFor="pdf-upload"
-                className={`block w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-2 border-dashed transition-all cursor-pointer text-center ${
-                  loading
-                    ? "border-gray-300 bg-gray-50"
-                    : "border-blue-400 bg-blue-50 hover:border-blue-600 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-900 dark:hover:bg-blue-800"
-                }`}
+                className={`block w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-2 border-dashed transition-all cursor-pointer text-center ${loading
+                  ? "border-gray-300 bg-gray-50"
+                  : "border-blue-400 bg-blue-50 hover:border-blue-600 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-900 dark:hover:bg-blue-800"
+                  }`}
               >
                 <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                   {loading ? "Uploading..." : "Choose PDF or drag"}
