@@ -31,10 +31,16 @@ async def ingest(file: UploadFile = File(...)):
     
     # Check file size (max 50MB)
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-    file_size = len(await file.read())
-    await file.seek(0)  # Reset file pointer
+    uploaded_file = file.file
+    uploaded_file.seek(0, 2)  # move cursor to end
+    file_size = uploaded_file.tell()
+    uploaded_file.seek(0)     # reset cursor
+
     if file_size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB")
+        raise HTTPException(
+            status_code=413,
+            detail="File too large. Maximum size is 50MB"
+        )
 
     try:
         result = ingest_pdf(file)

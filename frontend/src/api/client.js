@@ -7,7 +7,13 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,  // 30 second timeout for all requests
+  
+  // ⏱️ Allow long-running uploads (PDF parsing + embeddings)
+  timeout: 10 * 60 * 1000, // 10 minutes
+
+  // 📦 Allow large PDFs
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity,
 });
 
 // Error interceptor for consistent error handling
