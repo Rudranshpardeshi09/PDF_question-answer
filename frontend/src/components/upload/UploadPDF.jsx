@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { uploadPDF } from "@/api/client";
 import { useApp } from "@/context/AppContext";
+import { getIngestStatus } from "@/api/client";
+
 
 const cardVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -37,20 +39,49 @@ export default function UploadPDF() {
     setProgress(0);
 
     try {
-      const response = await uploadPDF(file, setProgress);
-      setUploadedFile({
-        name: response.data.filename,
-        pages: response.data.pages,
-        chunks: response.data.chunks,
-      });
-      setIndexed(true);
+      await uploadPDF(file, setProgress);
+
+      // 🔄 Start polling ingestion status
+      pollIngestionStatus(file.name);
+
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to upload PDF");
       console.error("Upload error:", err);
-    } finally {
       setLoading(false);
     }
   };
+
+
+  const pollIngestionStatus = (filename) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await getIngestStatus();
+
+        if (res.data.status === "completed") {
+          setUploadedFile({
+            name: filename,
+            pages: res.data.pages,
+            chunks: res.data.chunks,
+          });
+
+          setIndexed(true);
+          setLoading(false);
+          clearInterval(interval);   
+        }
+
+        if (res.data.status === "failed") {
+          setError(res.data.error || "PDF ingestion failed");
+          setLoading(false);
+          clearInterval(interval);  
+        }
+      } catch (e) {
+        console.error("Status check failed", e);
+        clearInterval(interval);     // ✅ FAIL SAFE
+      }
+    }, 2000);
+  };
+
+
 
   return (
     <motion.div

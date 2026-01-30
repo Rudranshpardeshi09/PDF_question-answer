@@ -1,10 +1,35 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import BackgroundTasks
+
 from app.services.ingestion_service import ingest_pdf
 
 router = APIRouter(prefix="/ingest", tags=["Document Ingestion"])
 
+INGESTION_STATUS = {
+    "status": "idle",      # idle | processing | completed | failed
+    "pages": 0,
+    "chunks": 0,
+    "error": None,
+}
+
+def ingest_background(file: UploadFile):
+    try:
+        INGESTION_STATUS["status"] = "processing"
+        INGESTION_STATUS["error"] = None
+
+        result = ingest_pdf(file)
+
+        INGESTION_STATUS["status"] = "completed"
+        INGESTION_STATUS["pages"] = result.get("pages", 0)
+        INGESTION_STATUS["chunks"] = result.get("chunks", 0)
+
+    except Exception as e:
+        INGESTION_STATUS["status"] = "failed"
+        INGESTION_STATUS["error"] = str(e)
+
+
 @router.post("/")
-async def ingest(file: UploadFile = File(...)):
+async def ingest(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """
     Upload and index a PDF document.
     
@@ -43,7 +68,18 @@ async def ingest(file: UploadFile = File(...)):
         )
 
     try:
-        result = ingest_pdf(file)
-        return result
+        # Run ingestion in background
+        background_tasks.add_task(ingest_background, file)
+
+        # Respond immediately (no timeout)
+        return {
+            "status": "accepted",
+            "message": "PDF upload received. Processing started in background.",
+            "filename": file.filename
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error ingesting PDF: {str(e)}")
+    
+@router.get("/status")
+async def ingest_status():
+    return INGESTION_STATUS

@@ -7,7 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: API_URL,
-  
+
   // ⏱️ Allow long-running uploads (PDF parsing + embeddings)
   timeout: 10 * 60 * 1000, // 10 minutes
 
@@ -27,6 +27,9 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const getIngestStatus = () =>
+  api.get("/ingest/status");
 
 /**
  * Upload a PDF document for indexing
