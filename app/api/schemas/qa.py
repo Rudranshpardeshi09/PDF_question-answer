@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 class Source(BaseModel):
@@ -6,13 +6,22 @@ class Source(BaseModel):
     text: str
 
 class QARequest(BaseModel):
-    question: str
-    subject: Optional[str] = None
-    unit: Optional[str] = None
-    topic: Optional[str] = None
-    marks: Optional[int] = None
+    """Request model for QA endpoint."""
+    question: str = Field(..., min_length=1, max_length=1000)
+    syllabus_context: Optional[str] = Field(
+        default=None, 
+        max_length=10000,
+        description="User's syllabus, topics, or study context"
+    )
+    marks: Optional[int] = Field(
+        default=3, 
+        ge=1, 
+        le=100,
+        description="Answer length: 3=short, 5=medium, 12=long"
+    )
 
 class QAResponse(BaseModel):
+    """Response model for QA endpoint."""
     answer: str
     pages: List[str]
     sources: List[Source]

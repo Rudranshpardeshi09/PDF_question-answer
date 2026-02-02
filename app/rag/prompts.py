@@ -2,11 +2,9 @@ from langchain_core.prompts import PromptTemplate
 
 RAG_PROMPT = PromptTemplate(
     input_variables=[
-        "subject",
+        "syllabus_context",
         "context",
         "question",
-        "unit",
-        "topic",
         "marks"
     ],
     template="""You are an expert academic tutor specializing in exam preparation and concept clarity.
@@ -15,10 +13,11 @@ RAG_PROMPT = PromptTemplate(
 CRITICAL GUIDELINES:
 ═══════════════════════════════════════════════════════════════════════════════
 
-✓ AUTHENTICITY: Answer EXCLUSIVELY from the provided study material
+✓ AUTHENTICITY: Answer EXCLUSIVELY from the provided study material (PDF content)
 ✓ COMPLETENESS: Use all relevant information provided in the context
 ✓ CLARITY: Explain concepts clearly, as if to a student preparing for exams
 ✓ STRUCTURE: Use the format specified by marks without exception
+✓ SYLLABUS FOCUS: If syllabus/topics are provided, prioritize information relevant to them
 
 IF information is absent: State clearly "This specific aspect is not covered in the provided material."
 DO NOT: Refuse to answer or say "I cannot help" if the material contains relevant information.
@@ -50,15 +49,16 @@ ANSWER FORMAT BY MARKS:
   └─ High-quality exam answer
 
 ═══════════════════════════════════════════════════════════════════════════════
-CONTEXT METADATA:
+SYLLABUS / STUDY CONTEXT (User Provided):
 ═══════════════════════════════════════════════════════════════════════════════
-Subject: {subject}
-Unit: {unit}  
-Topic: {topic}
-Marks Required: {marks}
+{syllabus_context}
 
 ═══════════════════════════════════════════════════════════════════════════════
-STUDY MATERIAL:
+MARKS REQUIRED: {marks}
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+RELEVANT CONTENT FROM UPLOADED PDFs:
 ═══════════════════════════════════════════════════════════════════════════════
 {context}
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { askQuestion } from "@/api/client";
@@ -14,36 +14,35 @@ const containerVariants = {
 
 export default function ChatWindow() {
   const {
-    subject,
     indexed,
     messages,
     setMessages,
-    unit,
-    topic,
+    syllabusText,
     marks,
   } = useApp();
 
   const messagesEndRef = useRef(null);
-  const scrollAreaRef = useRef(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const sendQuestion = async (q) => {
-    if (!subject || !unit || !topic || !marks) {
-      alert("Please complete the following before asking:\n✓ Upload PDF\n✓ Upload Syllabus\n✓ Select Unit, Topic, and Marks");
+  const sendQuestion = useCallback(async (q) => {
+    // Only require indexed PDFs - syllabus is optional
+    if (!indexed) {
+      alert("Please upload at least one PDF document first.");
       return;
     }
 
     setMessages((m) => [...m, { role: "user", content: q }]);
 
     try {
-      const res = await askQuestion(q, subject, unit, topic, marks);
+      // Send question with syllabus context (can be empty) and marks
+      const res = await askQuestion(q, syllabusText, marks);
 
       setMessages((m) => [
         ...m,
@@ -65,14 +64,14 @@ export default function ChatWindow() {
         },
       ]);
     }
-  };
+  }, [indexed, syllabusText, marks, setMessages]);
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="h-full flex flex-col bg-gradient-to-br from-white via-blue-50 to-indigo-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:border dark:border-emerald-500/30 dark:shadow-2xl dark:shadow-emerald-500/10 rounded-xl border-0 shadow-xl overflow-hidden transition-all duration-300 dark:hover:border-emerald-500/50 dark:hover:shadow-emerald-500/20"
+      className="h-full flex flex-col bg-gradient-to-br from-white via-blue-50 to-indigo-50 dark:bg-gradient-to-br dark:from-neutral-950 dark:via-black dark:to-black dark:border dark:border-neon-500/30 dark:shadow-2xl dark:shadow-neon/20 rounded-xl border-0 shadow-xl overflow-hidden transition-all duration-300 dark:hover:border-neon-500/50 dark:hover:shadow-neon-lg"
     >
       
       {/* HEADER */}
@@ -80,23 +79,27 @@ export default function ChatWindow() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="flex-shrink-0 border-b border-blue-200 dark:border-emerald-500/30 p-3 sm:p-4 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-emerald-600 dark:to-emerald-700 text-white"
+        className="flex-shrink-0 border-b border-blue-200 dark:border-neon-500/30 p-3 sm:p-4 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-neon-600 dark:to-neon-700 text-white transition-colors duration-300"
       >
         <h2 className="font-bold text-sm sm:text-lg flex items-center gap-1 sm:gap-2">
           <span className="text-xl sm:text-2xl">✨</span>
           <span>Study Assistant</span>
         </h2>
-        <AnimatePresence>
-          {subject && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-xs sm:text-sm text-blue-100 mt-1 truncate"
-            >
-              {subject} • <strong>{unit}</strong> • {topic.substring(0, 20)}{topic.length > 20 ? "..." : ""}
-            </motion.p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-xs sm:text-sm text-blue-100 mt-1"
+        >
+          {indexed ? (
+            <>
+              📚 PDFs ready • 
+              {syllabusText ? " 📋 Syllabus loaded • " : " "}
+              {marks === 3 ? "📝 Short" : marks === 5 ? "📄 Medium" : "📚 Long"} answers
+            </>
+          ) : (
+            "Upload PDFs to start chatting"
           )}
-        </AnimatePresence>
+        </motion.p>
       </motion.div>
 
       {/* MESSAGES SCROLL AREA */}
@@ -113,11 +116,16 @@ export default function ChatWindow() {
         >
           <div className="text-center">
             <p className="text-2xl mb-2">🎓</p>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 px-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-400 px-4">
               {!indexed
                 ? "Upload a PDF to get started"
-                : "Upload syllabus and select a topic to begin"}
+                : "Ask any question about your uploaded documents!"}
             </p>
+            {indexed && !syllabusText && (
+              <p className="text-[10px] text-gray-500 dark:text-neutral-500 mt-2 px-4">
+                💡 Tip: Add syllabus/topics for more focused answers
+              </p>
+            )}
           </div>
         </motion.div>
       )}
@@ -129,7 +137,7 @@ export default function ChatWindow() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            transition={{ type: "spring", stiffness: 120, damping: 22 }}
             className="space-y-2"
           >
             <MessageBubble role={m.role} content={m.content} error={m.error} />
@@ -157,11 +165,11 @@ export default function ChatWindow() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="flex-shrink-0 border-t border-blue-200 dark:border-emerald-500/30 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-950"
+        className="flex-shrink-0 border-t border-blue-200 dark:border-neon-500/30 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-neutral-950 dark:to-black transition-colors duration-300"
       >
         <ChatInput 
           onSend={sendQuestion} 
-          disabled={!indexed || !subject || !unit || !topic}
+          disabled={!indexed}
         />
       </motion.div>
     </motion.div>

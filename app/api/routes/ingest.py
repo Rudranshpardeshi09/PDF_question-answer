@@ -154,22 +154,34 @@
 #         "message": "All PDFs and embeddings deleted"
 #     }
 
+"""
+PDF Ingestion API Routes
+Handles PDF upload, background processing, and status tracking
+"""
+
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
-import os, shutil
+import os
+import shutil
+import logging
 from urllib.parse import unquote
-from app.services.ingestion_service import ingest_pdf
-import asyncio
-from fastapi.concurrency import run_in_threadpool
 from concurrent.futures import ThreadPoolExecutor
+from app.services.ingestion_service import ingest_pdf
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ingest", tags=["Document Ingestion"])
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CONFIGURATION
+# ══════════════════════════════════════════════════════════════════════════════
 UPLOAD_DIR = "app/data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-INGESTION_STATUS = {}  # filename -> status
+# Thread pool for CPU-intensive PDF processing (limited to prevent resource exhaustion)
+executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="pdf_ingest_")
 
-executor = ThreadPoolExecutor(max_workers=2)
+# In-memory status tracking (consider Redis for production scale)
+INGESTION_STATUS = {}
 
 def ingest_background(file_path: str, filename: str):
     # ⛔ prevent duplicate processing (skip only if already actively processing)

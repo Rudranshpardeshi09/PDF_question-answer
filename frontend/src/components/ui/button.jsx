@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-primary to-emerald-600 text-primary-foreground shadow-lg hover:shadow-xl hover:shadow-primary/30 dark:hover:shadow-emerald-500/30 hover:scale-105",
+          "bg-gradient-to-r from-primary to-emerald-600 text-primary-foreground shadow-lg hover:shadow-xl hover:shadow-primary/30 dark:hover:shadow-neon/30 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 transition-colors duration-200",
         outline:
-          "border border-emerald-500/30 dark:border-emerald-500/50 bg-background shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-emerald-500/70 dark:hover:border-emerald-400",
+          "border border-emerald-500/30 dark:border-neon-500/50 bg-background shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-emerald-500/70 dark:hover:border-neon-400 transition-colors duration-200",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-emerald-500/20",
-        link: "text-primary underline-offset-4 hover:underline dark:text-emerald-400",
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 transition-colors duration-200",
+        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-neon-500/20 transition-colors duration-200",
+        link: "text-primary underline-offset-4 hover:underline dark:text-neon-400 transition-colors duration-200",
       },
       size: {
         default: "h-9 px-4 py-2",

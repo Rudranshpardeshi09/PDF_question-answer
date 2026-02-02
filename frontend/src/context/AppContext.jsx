@@ -1,41 +1,50 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOCUMENT STATE
+  // ═══════════════════════════════════════════════════════════════════════════
   const [indexed, setIndexed] = useState(false);
   const [messages, setMessages] = useState([]);
 
-  // 🔥 STUDY MODE STATE - ENHANCED FOR NEW SYLLABUS STRUCTURE
-  const [subject, setSubject] = useState("");           // Subject from syllabus
-  const [syllabusData, setSyllabusData] = useState(null); // Full parsed syllabus
-  const [unit, setUnit] = useState("");                  // Selected unit
-  const [topic, setTopic] = useState("");                // Selected topic
-  const [marks, setMarks] = useState(3);                 // Answer marks (3/5/12)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STUDY OPTIONS STATE (Simplified)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [syllabusText, setSyllabusText] = useState("");  // User-entered syllabus/topics text
+  const [marks, setMarks] = useState(3);                  // Answer length (3/5/12)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HELPER FUNCTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const clearSyllabus = useCallback(() => {
+    setSyllabusText("");
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    // Document state
+    indexed,
+    setIndexed,
+    messages,
+    setMessages,
+    clearMessages,
+
+    // Study options (simplified)
+    syllabusText,
+    setSyllabusText,
+    clearSyllabus,
+    marks,
+    setMarks,
+  }), [indexed, messages, syllabusText, marks, clearMessages, clearSyllabus]);
 
   return (
-    <AppContext.Provider
-      value={{
-        indexed,
-        setIndexed,
-        messages,
-        setMessages,
-
-        // Syllabus data
-        subject,
-        setSubject,
-        syllabusData,
-        setSyllabusData,
-
-        // Study selection
-        unit,
-        setUnit,
-        topic,
-        setTopic,
-        marks,
-        setMarks,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

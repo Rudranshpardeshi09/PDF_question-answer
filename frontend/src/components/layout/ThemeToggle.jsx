@@ -26,9 +26,9 @@ export default function ThemeToggle() {
       whileTap={{ scale: 0.95 }}
       whileHover={{ scale: 1.05 }}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all border
+      className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 border
         ${isDark
-          ? "bg-black text-green-400 border-green-500 shadow-[0_0_18px_rgba(34,197,94,0.6)]"
+          ? "bg-black text-neon-400 border-neon-500 shadow-neon hover:shadow-neon-lg"
           : "bg-white text-gray-900 border-gray-300 shadow-sm"
         }`}
     >

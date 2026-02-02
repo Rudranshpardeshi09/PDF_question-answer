@@ -66,10 +66,8 @@ async def ask_question(request: QARequest):
         result = run_rag(
             question=request.question.strip(),
             vectorstore=vectorstore,
-            subject=request.subject or "General",
-            unit=request.unit or "General",
-            topic=request.topic or "General",
-            marks=request.marks or 0
+            syllabus_context=request.syllabus_context or "",
+            marks=request.marks or 3
         )
         
         # Check if there was an error in the result

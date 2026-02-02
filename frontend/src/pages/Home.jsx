@@ -2,9 +2,9 @@ import { motion } from "framer-motion";
 import AppLayout from "@/components/layout/AppLayout";
 import UploadPDF from "@/components/upload/UploadPDF";
 import ChatWindow from "@/components/chat/ChatWindow";
-import SyllabusUpload from "@/components/syllabus/SyllabusUpload";
-import StudyControls from "@/components/study/StudyControls";
+import StudyPanel from "@/components/study/StudyPanel";
 
+// Animation variants defined outside component for performance
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -37,28 +37,23 @@ export default function Home() {
           initial="hidden"
           animate="visible"
         >
-          {/* Responsive grid: 1 col on mobile, 2 cols on tablet, 3 on desktop */}
+          {/* Responsive grid: 3 columns on desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 md:gap-5 h-full">
             
             {/* LEFT PANEL - PDF Upload */}
             <motion.div 
-              className="col-span-1 sm:col-span-2 lg:col-span-3 h-full overflow-hidden"
+              className="col-span-1 sm:col-span-1 lg:col-span-3 h-full overflow-hidden"
               variants={itemVariants}
             >
               <UploadPDF />
             </motion.div>
 
-            {/* CENTER PANEL - Syllabus & Study Controls */}
+            {/* CENTER PANEL - Study Options (merged syllabus + answer length) */}
             <motion.div 
-              className="col-span-1 sm:col-span-2 lg:col-span-3 h-full space-y-3 sm:space-y-4 flex flex-col overflow-hidden"
+              className="col-span-1 sm:col-span-1 lg:col-span-3 h-full overflow-hidden"
               variants={itemVariants}
             >
-              <div className="flex-shrink-0">
-                <SyllabusUpload />
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <StudyControls />
-              </div>
+              <StudyPanel />
             </motion.div>
 
             {/* RIGHT PANEL - Chat Window */}

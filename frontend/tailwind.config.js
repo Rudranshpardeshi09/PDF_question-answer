@@ -52,9 +52,53 @@ export default {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
+  			},
+  			// Black + neon green dark theme palette
+  			neon: {
+  				DEFAULT: '#00ff88',
+  				50: '#e6fff2',
+  				100: '#b3ffd9',
+  				200: '#80ffc0',
+  				300: '#4dffa6',
+  				400: '#1aff8d',
+  				500: '#00ff88',
+  				600: '#00cc6d',
+  				700: '#009952',
+  				800: '#006637',
+  				900: '#00331c',
+  				950: '#001a0e',
   			}
-  		}
-  	}
+  		},
+  		animation: {
+  			'neon-pulse': 'neon-pulse 2s ease-in-out infinite',
+  			'fade-in': 'fade-in 0.4s ease-out',
+  			'slide-up': 'slide-up 0.4s ease-out',
+  			'glow': 'glow 2s ease-in-out infinite alternate',
+  		},
+  		keyframes: {
+  			'neon-pulse': {
+  				'0%, 100%': { opacity: '1', boxShadow: '0 0 8px var(--tw-shadow-color)' },
+  				'50%': { opacity: '0.9', boxShadow: '0 0 16px var(--tw-shadow-color)' },
+  			},
+  			'fade-in': {
+  				'0%': { opacity: '0' },
+  				'100%': { opacity: '1' },
+  			},
+  			'slide-up': {
+  				'0%': { opacity: '0', transform: 'translateY(12px)' },
+  				'100%': { opacity: '1', transform: 'translateY(0)' },
+  			},
+  			'glow': {
+  				'0%': { boxShadow: '0 0 5px rgba(0, 255, 136, 0.4)' },
+  				'100%': { boxShadow: '0 0 20px rgba(0, 255, 136, 0.7)' },
+  			},
+  		},
+  		boxShadow: {
+  			'neon': '0 0 15px rgba(0, 255, 136, 0.4)',
+  			'neon-lg': '0 0 25px rgba(0, 255, 136, 0.5)',
+  			'neon-sm': '0 0 8px rgba(0, 255, 136, 0.3)',
+  		},
+  	},
   },
   plugins: [require("tailwindcss-animate")],
 };

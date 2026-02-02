@@ -36,41 +36,40 @@
   }
 
   .dark {
-    /* Premium Black + Neon Green Theme */
-    /* Base surfaces - Pure black with subtle gradients */
-    --background: 0 0% 3%;
-    --foreground: 142 100% 92%;
+    /* Black + Neon Green Theme - Pure black base, neon green accents */
+    --background: 0 0% 0%;
+    --foreground: 150 100% 92%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 142 100% 92%;
+    --card: 0 0% 4%;
+    --card-foreground: 150 100% 90%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 142 100% 92%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 150 100% 90%;
 
-    /* Neon green brand - Vibrant & Professional */
-    --primary: 142 100% 51%;
-    --primary-foreground: 0 0% 3%;
+    /* Neon green #00ff88 - HSL ~150 100% 50% */
+    --primary: 150 100% 50%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 142 85% 50%;
-    --secondary-foreground: 0 0% 3%;
+    --secondary: 150 80% 45%;
+    --secondary-foreground: 0 0% 0%;
 
-    --accent: 142 100% 51%;
-    --accent-foreground: 0 0% 3%;
+    --accent: 150 100% 50%;
+    --accent-foreground: 0 0% 0%;
 
-    /* UI neutrals - Dark gray for contrast */
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 75%;
+    /* UI neutrals - Near black / dark gray */
+    --muted: 0 0% 10%;
+    --muted-foreground: 150 20% 70%;
 
-    --border: 142 100% 40%;
-    --input: 0 0% 10%;
-    --ring: 142 100% 51%;
+    --border: 150 100% 35%;
+    --input: 0 0% 8%;
+    --ring: 150 100% 50%;
 
-    /* Charts */
-    --chart-1: 142 100% 51%;
-    --chart-2: 160 100% 45%;
-    --chart-3: 120 100% 50%;
-    --chart-4: 80 100% 50%;
-    --chart-5: 200 100% 50%;
+    /* Charts - neon family */
+    --chart-1: 150 100% 50%;
+    --chart-2: 160 100% 48%;
+    --chart-3: 140 100% 50%;
+    --chart-4: 120 100% 50%;
+    --chart-5: 180 100% 50%;
   }
 }
 
@@ -92,10 +91,10 @@
     @apply h-auto;
   }
 
-  /* Dark mode premium card styling */
+  /* Dark mode: black + neon green card surfaces */
   .dark .bg-card,
   .dark [class*="bg-gradient"] {
-    @apply bg-gradient-to-br from-gray-900 via-gray-950 to-black;
+    @apply bg-gradient-to-br from-neutral-950 via-black to-black;
   }
 
   .dark .rounded-xl,
@@ -103,28 +102,29 @@
     @apply relative;
   }
 
-  /* Premium dark mode cards with neon border */
+  /* Neon green borders in dark mode */
   .dark .rounded-xl,
   .dark .rounded-lg {
-    @apply border-emerald-500/30;
+    @apply border-neon-500/30;
   }
 
-  .dark .hover\:border-emerald-500\/50:hover {
-    @apply border-emerald-500/50;
+  .dark .hover\:border-emerald-500\/50:hover,
+  .dark .hover\:border-neon-500\/50:hover {
+    @apply border-neon-500/50;
   }
 
-  /* Dark mode text improvements */
+  /* Dark mode headings - neon green */
   .dark h1,
   .dark h2,
   .dark h3,
   .dark h4,
   .dark h5,
   .dark h6 {
-    @apply text-emerald-400;
+    @apply text-neon-400;
   }
 
   .dark p {
-    @apply text-gray-300;
+    @apply text-neutral-300;
   }
 
   /* Mobile-first responsive text - Fixed to use standard breakpoints */
@@ -154,7 +154,7 @@
 
   /* Glass morphism effect for premium look */
   .glass-effect {
-    @apply bg-white/30 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-emerald-500/20;
+    @apply bg-white/30 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-neon-500/20;
   }
 
   /* Ensure touch targets are minimum 44px for mobile */
@@ -170,11 +170,11 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-950;
+    @apply bg-gray-100 dark:bg-neutral-950;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-emerald-400 dark:bg-emerald-500 rounded hover:bg-emerald-500 dark:hover:bg-emerald-400 transition-colors;
+    @apply bg-emerald-400 dark:bg-neon-500 rounded hover:bg-emerald-500 dark:hover:bg-neon-400 transition-colors duration-300;
   }
 
   /* Responsive text sizing helper */
@@ -192,13 +192,15 @@
 
   /* Premium button hover effects */
   .premium-btn {
-    @apply relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/30;
+    @apply relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/30 dark:hover:shadow-neon-lg;
   }
 
   /* Neon glow effect */
   .neon-glow {
-    @apply shadow-lg shadow-emerald-500/30 dark:shadow-emerald-500/50;
+    @apply shadow-lg shadow-emerald-500/30 dark:shadow-neon-lg;
   }
+
+  /* Use Tailwind animate-fade-in, animate-slide-up, animate-neon-pulse from config */
 
   /* Mobile responsive text truncation */
   @screen md {
@@ -288,33 +290,33 @@
   }
 
   .scrollable-area::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-950;
+    @apply bg-gray-100 dark:bg-neutral-950;
   }
 
   .scrollable-area::-webkit-scrollbar-thumb {
-    @apply bg-emerald-400 dark:bg-emerald-500 rounded hover:bg-emerald-500 dark:hover:bg-emerald-400;
+    @apply bg-emerald-400 dark:bg-neon-500 rounded hover:bg-emerald-500 dark:hover:bg-neon-400 transition-colors duration-300;
   }
 }
 
-/* Neon green dark mode enhancements */
+/* Black + neon green dark mode enhancements */
 @layer components {
   .dark .card-neon {
-    @apply bg-gradient-to-br from-gray-900 via-gray-950 to-black border border-emerald-500/30 shadow-xl shadow-emerald-500/10 hover:border-emerald-500/50 hover:shadow-emerald-500/20 transition-all duration-300;
+    @apply bg-gradient-to-br from-neutral-950 via-black to-black border border-neon-500/30 shadow-xl shadow-neon/20 hover:border-neon-500/50 hover:shadow-neon-lg transition-all duration-300;
   }
 
   .dark .text-neon {
-    @apply text-emerald-400;
+    @apply text-neon-400;
   }
 
   .dark .border-neon {
-    @apply border-emerald-500/30;
+    @apply border-neon-500/30;
   }
 
   .dark .hover\:border-neon:hover {
-    @apply border-emerald-500/50;
+    @apply border-neon-500/50;
   }
 
   .dark .bg-neon-glow {
-    @apply bg-gradient-to-br from-emerald-600/20 to-emerald-700/20 border border-emerald-500/30;
+    @apply bg-gradient-to-br from-neon-900/40 to-neon-950/40 border border-neon-500/30;
   }
 }

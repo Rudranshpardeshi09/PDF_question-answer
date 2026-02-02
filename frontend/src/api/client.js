@@ -65,28 +65,24 @@ export const uploadSyllabus = (file) => {
 };
 
 /**
- * Ask a question about the indexed PDF
+ * Ask a question about ALL indexed PDFs
  * @param {string} question - The question to ask
- * @param {string} subject - Subject from syllabus
- * @param {string} unit - Selected unit
- * @param {string} topic - Selected topic
- * @param {number} marks - Answer marks (3, 5, or 12)
+ * @param {string} syllabusContext - User's syllabus/topics text (optional)
+ * @param {number} marks - Answer length: 3=short, 5=medium, 12=long
  * @returns {Promise} Response with answer, pages, sources
  */
-export const askQuestion = (question, subject, unit, topic, marks) => {
-  // Input validation on client side
+export const askQuestion = (question, syllabusContext = "", marks = 3) => {
+  // Input validation
   if (!question || typeof question !== "string" || question.trim().length === 0) {
     return Promise.reject(new Error("Question must be a non-empty string"));
   }
-  if (typeof marks !== "number" || marks < 0) {
-    return Promise.reject(new Error("Marks must be a non-negative number"));
+  if (typeof marks !== "number" || marks < 1) {
+    return Promise.reject(new Error("Marks must be a positive number"));
   }
   
   return api.post("/qa/ask", {
     question: question.trim(),
-    subject: subject || null,
-    unit: unit || null,
-    topic: topic || null,
+    syllabus_context: syllabusContext || null,
     marks,
   });
 };

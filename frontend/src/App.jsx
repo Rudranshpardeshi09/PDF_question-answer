@@ -12,7 +12,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-gray-950 dark:to-gray-900">
+        <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-neutral-950 dark:to-black transition-colors duration-300">
           <Navigation currentPage={currentPage} onNavigate={setCurrentPage} />
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {currentPage === "home" && <Home />}

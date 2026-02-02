@@ -124,8 +124,8 @@ function ExpandableStep({ step, index }) {
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
     >
-      <Card className="mb-3 sm:mb-4 dark:border-emerald-500/30 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black 
-                       hover:dark:border-emerald-500/50 hover:dark:shadow-2xl hover:dark:shadow-emerald-500/10 cursor-pointer transition-all duration-300"
+      <Card className="mb-3 sm:mb-4 dark:border-neon-500/30 dark:bg-gradient-to-br dark:from-neutral-950 dark:via-black dark:to-black 
+                       hover:dark:border-neon-500/50 hover:dark:shadow-2xl hover:dark:shadow-neon-lg cursor-pointer transition-all duration-300"
             onClick={() => setExpanded(!expanded)}>
         <CardHeader className="p-4 sm:p-6">
           <motion.div
@@ -135,17 +135,17 @@ function ExpandableStep({ step, index }) {
               setExpanded(!expanded);
             }}
           >
-            <CardTitle className="flex items-center gap-3 text-sm sm:text-base dark:text-emerald-400">
+            <CardTitle className="flex items-center gap-3 text-sm sm:text-base dark:text-neon-400">
               <span className="text-lg sm:text-2xl">{step.title}</span>
             </CardTitle>
             <motion.div
               animate={{ rotate: expanded ? 180 : 0 }}
               transition={{ duration: 0.3 }}
             >
-              <ChevronDown className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+              <ChevronDown className="w-5 h-5 text-emerald-500 dark:text-neon-400 transition-transform duration-300" />
             </motion.div>
           </motion.div>
-          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mt-2 sm:mt-3">
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-neutral-300 mt-2 sm:mt-3">
             {step.description}
           </p>
         </CardHeader>
@@ -155,10 +155,10 @@ function ExpandableStep({ step, index }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-t border-gray-200 dark:border-emerald-500/20"
+            className="border-t border-gray-200 dark:border-neon-500/20"
           >
-            <CardContent className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50">
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            <CardContent className="p-4 sm:p-6 bg-gray-50 dark:bg-neutral-950/80">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-400 leading-relaxed">
                 {step.details}
               </p>
             </CardContent>
@@ -172,7 +172,7 @@ function ExpandableStep({ step, index }) {
 export default function Tutorial() {
   return (
     <div className="w-full min-h-screen overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 
-                    dark:from-black dark:via-gray-950 dark:to-gray-900">
+                    dark:from-black dark:via-neutral-950 dark:to-black transition-colors duration-300">
       <motion.div
         className="max-w-4xl mx-auto w-full"
         variants={containerVariants}
@@ -191,10 +191,10 @@ export default function Tutorial() {
           >
             📖
           </motion.div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-emerald-400 mb-3 sm:mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-neon-400 mb-3 sm:mb-4">
             Learn How to Use PDF RAG
           </h1>
-          <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+          <p className="text-base sm:text-lg text-gray-600 dark:text-neutral-300 leading-relaxed">
             Master the art of smart studying with our AI-powered study assistant. Follow this guide to make the most of your learning experience.
           </p>
         </motion.div>
@@ -212,14 +212,14 @@ export default function Tutorial() {
           ].map((stat, idx) => (
             <motion.div
               key={idx}
-              className="p-4 sm:p-6 rounded-lg bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black 
-                         border border-gray-200 dark:border-emerald-500/30 shadow-sm dark:shadow-xl dark:shadow-emerald-500/10"
-              whileHover={{ y: -5, shadow: "0 20px 25px -5 rgba(16, 185, 129, 0.1)" }}
-              transition={{ duration: 0.3 }}
+              className="p-4 sm:p-6 rounded-lg bg-white dark:bg-gradient-to-br dark:from-neutral-950 dark:via-black dark:to-black 
+                         border border-gray-200 dark:border-neon-500/30 shadow-sm dark:shadow-xl dark:shadow-neon/20 transition-all duration-300"
+              whileHover={{ y: -6, transition: { duration: 0.25 } }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
             >
               <div className="text-3xl sm:text-4xl mb-2">{stat.icon}</div>
-              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
-              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-emerald-400">
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-neutral-400 font-medium">{stat.label}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-neon-400">
                 {stat.value}
               </div>
             </motion.div>
@@ -246,10 +246,10 @@ export default function Tutorial() {
               >
                 <span className="text-4xl sm:text-5xl">{section.icon}</span>
                 <div>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-emerald-400">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-neon-400">
                     {section.title}
                   </h2>
-                  <div className="h-1 w-20 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full mt-2"></div>
+                  <div className="h-1 w-20 bg-gradient-to-r from-emerald-400 to-emerald-500 dark:from-neon-400 dark:to-neon-500 rounded-full mt-2 transition-colors duration-300"></div>
                 </div>
               </motion.div>
 
@@ -270,11 +270,11 @@ export default function Tutorial() {
         {/* CTA Section */}
         <motion.div
           className="mt-12 sm:mt-16 md:mt-20 p-6 sm:p-8 md:p-10 rounded-xl bg-gradient-to-r from-emerald-400/10 to-emerald-500/10 
-                     dark:from-emerald-500/20 dark:to-emerald-600/20 border border-emerald-200 dark:border-emerald-500/30
-                     text-center"
+                     dark:from-neon-500/20 dark:to-neon-600/20 border border-emerald-200 dark:border-neon-500/40
+                     text-center transition-colors duration-300"
           variants={itemVariants}
           whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.3 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
         >
           <motion.h3
             className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-emerald-400 mb-3 sm:mb-4"
@@ -283,15 +283,16 @@ export default function Tutorial() {
           >
             Ready to Start Learning? 🎓
           </motion.h3>
-          <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4 sm:mb-6">
+          <p className="text-sm sm:text-base text-gray-700 dark:text-neutral-300 mb-4 sm:mb-6">
             Go back to the Study Tool and start uploading your materials to begin your personalized learning journey.
           </p>
           <motion.button
             className="px-6 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold text-sm sm:text-base 
-                       bg-gradient-to-r from-emerald-400 to-emerald-500 text-black dark:text-white
-                       hover:shadow-lg hover:shadow-emerald-500/30 transition-all duration-300"
+                       bg-gradient-to-r from-emerald-400 to-emerald-500 dark:from-neon-500 dark:to-neon-400 text-black dark:text-black
+                       hover:shadow-lg hover:shadow-emerald-500/30 dark:hover:shadow-neon transition-all duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
             Go to Study Tool →
           </motion.button>
@@ -299,7 +300,7 @@ export default function Tutorial() {
 
         {/* Footer */}
         <motion.div
-          className="mt-12 sm:mt-16 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400"
+          className="mt-12 sm:mt-16 text-center text-xs sm:text-sm text-gray-500 dark:text-neutral-400"
           variants={itemVariants}
         >
           <p>Need help? Check our documentation or contact support for assistance.</p>

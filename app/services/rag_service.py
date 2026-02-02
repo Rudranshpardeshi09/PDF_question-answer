@@ -46,7 +46,7 @@ def rank_documents(docs: list, question: str) -> list:
     return [doc for doc, _ in scored_docs]
 
 
-def run_rag(question: str, vectorstore, subject, unit, topic, marks):
+def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int = 3):
     """
     Production-ready RAG pipeline:
     
@@ -57,24 +57,34 @@ def run_rag(question: str, vectorstore, subject, unit, topic, marks):
     5. Extract and return metadata
     
     This pipeline ensures:
-    - Questions are answered from the PDF content
+    - Questions are answered from ALL uploaded PDF content
+    - Syllabus context guides the answer focus
     - Context is comprehensive and relevant
-    - No aggressive filtering that removes valid documents
     - Proper error handling and fallbacks
+    
+    Args:
+        question: The user's question
+        vectorstore: FAISS vectorstore with all PDF embeddings
+        syllabus_context: User-provided syllabus/topics text
+        marks: Answer length (3=short, 5=medium, 12=long)
     """
     retriever = get_retriever(vectorstore)
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 1: RETRIEVE - Use both question and topic for best coverage
+    # STEP 1: RETRIEVE - Use question + syllabus context for coverage
     # ════════════════════════════════════════════════════════════════
     # Search with question keywords (primary)
     question_docs = retriever.invoke(question)
     
-    # Search with topic context (secondary)
-    topic_docs = retriever.invoke(f"{topic} {question}")
+    # Search with syllabus context if provided (secondary)
+    context_docs_extra = []
+    if syllabus_context and len(syllabus_context) > 10:
+        # Extract key terms from syllabus for better retrieval
+        syllabus_terms = syllabus_context[:500]  # Limit to prevent too broad search
+        context_docs_extra = retriever.invoke(f"{syllabus_terms} {question}")
     
     # Merge and deduplicate (keep unique by content)
-    combined_docs = question_docs + topic_docs
+    combined_docs = question_docs + context_docs_extra
     unique_docs = []
     seen_content = set()
     
@@ -87,8 +97,8 @@ def run_rag(question: str, vectorstore, subject, unit, topic, marks):
     if not unique_docs:
         return {
             "answer": (
-                f"I couldn't find relevant information about '{question}' in the document. "
-                "Try asking differently or check if the topic is covered in your study material."
+                f"I couldn't find relevant information about '{question}' in the uploaded documents. "
+                "Try asking differently or upload more relevant PDFs."
             ),
             "pages": [],
             "sources": [],
@@ -104,13 +114,17 @@ def run_rag(question: str, vectorstore, subject, unit, topic, marks):
     # STEP 3: BUILD CONTEXT - Combine top documents with separators
     # ════════════════════════════════════════════════════════════════
     # Use top 6 documents (quality over quantity)
-    context_docs = ranked_docs[:6]
+    top_docs = ranked_docs[:6]
     
     context_parts = []
-    for i, doc in enumerate(context_docs, 1):
+    for i, doc in enumerate(top_docs, 1):
         page_info = doc.metadata.get("page", "N/A")
+        source_file = doc.metadata.get("source", "Unknown")
+        # Extract just filename from path
+        if isinstance(source_file, str):
+            source_file = source_file.split("/")[-1].split("\\")[-1]
         context_parts.append(
-            f"[Source {i} - Page {page_info}]\n{doc.page_content}"
+            f"[Source {i} - {source_file}, Page {page_info}]\n{doc.page_content}"
         )
     
     context = "\n\n" + "─" * 70 + "\n\n".join(context_parts)
@@ -118,10 +132,11 @@ def run_rag(question: str, vectorstore, subject, unit, topic, marks):
     # ════════════════════════════════════════════════════════════════
     # STEP 4: GENERATE - Create prompt and call LLM
     # ════════════════════════════════════════════════════════════════
+    # Format syllabus context for prompt
+    formatted_syllabus = syllabus_context.strip() if syllabus_context else "No specific syllabus provided - answer based on all available content."
+    
     prompt = RAG_PROMPT.format(
-        subject=subject,
-        unit=unit,
-        topic=topic,
+        syllabus_context=formatted_syllabus,
         marks=marks,
         context=context,
         question=question
@@ -142,7 +157,7 @@ def run_rag(question: str, vectorstore, subject, unit, topic, marks):
     # ════════════════════════════════════════════════════════════════
     pages = sorted({
         str(doc.metadata.get("page", "N/A"))
-        for doc in context_docs
+        for doc in top_docs
     })
 
     sources = [
@@ -150,7 +165,7 @@ def run_rag(question: str, vectorstore, subject, unit, topic, marks):
             "page": doc.metadata.get("page", "N/A"),
             "text": doc.page_content[:250]
         }
-        for doc in context_docs
+        for doc in top_docs
     ]
 
     return {

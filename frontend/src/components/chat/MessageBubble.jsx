@@ -27,10 +27,10 @@ export default function MessageBubble({ role, content, error }) {
       <div
         className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm shadow-md transition-all hover:shadow-lg ${
           isUser
-            ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white"
+            ? "bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-neon-600 dark:to-neon-700 text-white"
             : error
-              ? "bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900 dark:to-pink-900 text-red-900 dark:text-red-200 border-2 border-red-300 dark:border-red-700"
-              : "bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900 text-gray-900 dark:text-gray-100 border border-blue-200 dark:border-blue-800"
+              ? "bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/80 dark:to-red-900/60 text-red-900 dark:text-red-200 border-2 border-red-300 dark:border-red-800"
+              : "bg-gradient-to-br from-gray-50 to-blue-50 dark:from-neutral-900 dark:to-neutral-950 text-gray-900 dark:text-neutral-100 border border-blue-200 dark:border-neon-500/40"
         }`}
       >
         {!isUser && (
@@ -38,7 +38,7 @@ export default function MessageBubble({ role, content, error }) {
             className={`mb-2 font-semibold text-xs ${
               error
                 ? "bg-red-500 text-white"
-                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-neon-600 dark:to-neon-500 text-white"
             }`}
           >
             {error ? "⚠️ System" : "🤖 AI"}

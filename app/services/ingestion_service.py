@@ -79,45 +79,55 @@ def ingest_pdf(input_source):
     #             logger.warning(f"Failed to delete temp file {persistent_path}: {str(e)}")
 
 def rebuild_vectorstore_from_uploads():
-    from app.vectorstore.faiss_store import save_vectorstore
+    """
+    Rebuild the entire vectorstore from all uploaded PDFs.
+    Called after deleting a PDF to ensure consistency.
+    """
+    from app.vectorstore.faiss_store import replace_vectorstore
     from app.rag.chunking import chunk_documents
     from app.core.config import settings
     from langchain_community.document_loaders import PyPDFLoader
-    import os, shutil
+    import os
+    import shutil
 
     uploads_dir = "app/data/uploads"
 
-    # ✅ Guard: uploads directory does not exist
+    # Guard: uploads directory does not exist
     if not os.path.exists(uploads_dir):
         return
 
-    # ✅ Collect PDFs once (no behavior change)
+    # Collect all PDF files
     pdf_files = [
         f for f in os.listdir(uploads_dir)
-        if f.endswith(".pdf")
+        if f.lower().endswith(".pdf")
     ]
 
-    # ✅ If no PDFs exist → wipe vector DB and exit
-    # (this logic already existed, just made explicit)
+    # If no PDFs exist → wipe vector DB and exit
     if not pdf_files:
         if os.path.exists(settings.VECTOR_DB_PATH):
             shutil.rmtree(settings.VECTOR_DB_PATH)
+        logger.info("No PDFs remaining, vectorstore cleared")
         return
 
     documents = []
 
-    # 🔹 Load PDFs (same as before)
+    # Load ALL remaining PDFs
     for filename in pdf_files:
-        loader = PyPDFLoader(os.path.join(uploads_dir, filename))
-        documents.extend(loader.load())
+        try:
+            loader = PyPDFLoader(os.path.join(uploads_dir, filename))
+            documents.extend(loader.load())
+            logger.info(f"Loaded {filename} for rebuild")
+        except Exception as e:
+            logger.warning(f"Failed to load {filename}: {e}")
 
-    # ✅ Safety: no documents loaded
+    # Safety: no documents loaded
     if not documents:
         if os.path.exists(settings.VECTOR_DB_PATH):
             shutil.rmtree(settings.VECTOR_DB_PATH)
         return
 
-    # 🔹 Chunk + save (unchanged)
+    # Chunk and REPLACE vectorstore (not merge)
     chunks = chunk_documents(documents)
-    save_vectorstore(chunks)
+    replace_vectorstore(chunks)
+    logger.info(f"Rebuilt vectorstore with {len(chunks)} chunks from {len(pdf_files)} PDFs")
 

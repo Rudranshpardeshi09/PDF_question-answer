@@ -163,7 +163,7 @@ export default function Footer() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="border-t border-gray-200 dark:border-emerald-500/30 bg-gray-50 dark:bg-gray-900/50 py-2 sm:py-2.5 px-2 sm:px-3"
+      className="border-t border-gray-200 dark:border-neon-500/30 bg-gray-50 dark:bg-black/50 py-2 sm:py-2.5 px-2 sm:px-3 transition-colors duration-300"
     >
       <div className="max-w-7xl mx-auto">
         {/* Single Row Layout */}
@@ -171,14 +171,14 @@ export default function Footer() {
           {/* Left Section */}
           <div className="flex items-center gap-1.5">
             <span className="text-base">🚀</span>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-neutral-400">
               © {currentYear} PDF RAG
             </p>
           </div>
 
           {/* Center Section */}
-          <p className="text-xs text-gray-500 dark:text-gray-500 hidden sm:block">
-            Made with <span className="text-emerald-500 dark:text-emerald-400">💚</span>
+          <p className="text-xs text-gray-500 dark:text-neutral-500 hidden sm:block">
+            Made with <span className="text-emerald-500 dark:text-neon-400">💚</span>
           </p>
 
           {/* Right Section - Social Links */}
@@ -192,9 +192,10 @@ export default function Footer() {
               <motion.a
                 key={social.label}
                 href="#"
-                className="text-xs text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
-                whileHover={{ scale: 1.1 }}
+                className="text-xs text-gray-500 dark:text-neutral-400 hover:text-emerald-500 dark:hover:text-neon-400 transition-colors duration-200"
+                whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 title={social.label}
               >
                 {social.icon}
@@ -205,9 +206,9 @@ export default function Footer() {
 
         {/* Bottom Accent - Hidden on mobile */}
         <motion.p
-          className="text-xs text-emerald-500/60 dark:text-emerald-400/60 text-center mt-1 hidden sm:block"
-          animate={{ opacity: [0.6, 0.8] }}
-          transition={{ repeat: Infinity, duration: 3 }}
+          className="text-xs text-emerald-500/60 dark:text-neon-400/70 text-center mt-1 hidden sm:block"
+          animate={{ opacity: [0.6, 1] }}
+          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
         >
           Powered by RAG
         </motion.p>
