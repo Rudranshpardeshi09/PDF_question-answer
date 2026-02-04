@@ -177,21 +177,19 @@ export default function Footer() {
           </div>
 
           {/* Center Section */}
-          <p className="text-xs text-gray-500 dark:text-neutral-500 hidden sm:block">
+          {/* <p className="text-xs text-gray-500 dark:text-neutral-500 hidden sm:block">
             Made with <span className="text-emerald-500 dark:text-neon-400">💚</span>
-          </p>
+          </p> */}
 
           {/* Right Section - Social Links */}
           <div className="flex gap-2">
             {[
-              { icon: "𝕏", label: "Twitter" },
-              { icon: "📘", label: "Facebook" },
-              { icon: "💼", label: "LinkedIn" },
-              { icon: "🐙", label: "GitHub" },
+              { icon: "💼", label: "LinkedIn", href: "https://www.linkedin.com/in/rudransh-pardeshi-666ba9266?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
+              { icon: "🐙", label: "GitHub", href: "https://github.com/Rudranshpardeshi09" },
             ].map((social) => (
               <motion.a
                 key={social.label}
-                href="#"
+                href={social.href}
                 className="text-xs text-gray-500 dark:text-neutral-400 hover:text-emerald-500 dark:hover:text-neon-400 transition-colors duration-200"
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
