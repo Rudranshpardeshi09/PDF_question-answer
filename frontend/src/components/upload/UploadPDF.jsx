@@ -6,7 +6,7 @@ import { uploadPDF, getIngestStatus, deletePDF, resetPDFs } from "@/api/client";
 import { useApp } from "@/context/AppContext";
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CONSTANTS (defined outside component to prevent recreation)
+// CONSTANTS
 // ══════════════════════════════════════════════════════════════════════════════
 const POLLING_INTERVAL = 2000;
 
@@ -37,15 +37,15 @@ const FileItem = memo(({ file, onDelete }) => (
     </p>
 
     {typeof file.progress === "number" && (
-<div className="h-2 bg-gray-300 dark:bg-neutral-700 rounded overflow-hidden">
-          <div
-            className={`h-full transition-all duration-500 ease-out ${
-              file.status === "completed"
-                ? "bg-green-500 dark:bg-neon-500"
-                : file.status === "failed"
-                ? "bg-red-500"
-                : "bg-blue-500 dark:bg-neon-600"
-            }`}
+      <div className="h-2 bg-gray-300 dark:bg-neutral-700 rounded overflow-hidden">
+        <div
+          className={`h-full transition-all duration-500 ease-out ${
+            file.status === "completed"
+              ? "bg-green-500 dark:bg-neon-500"
+              : file.status === "failed"
+              ? "bg-red-500"
+              : "bg-blue-500 dark:bg-neon-600"
+          }`}
           style={{ width: `${file.progress}%` }}
         />
       </div>
@@ -69,29 +69,41 @@ export default function UploadPDF() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState(null);
   
-  // Use ref to track polling intervals (avoids stale closure issues)
   const pollingRefs = useRef({});
   const isMountedRef = useRef(true);
 
-  // ✅ CLEANUP: Clear all polling intervals on unmount
+  // ✅ 1. LIFECYCLE: Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
-    
     return () => {
       isMountedRef.current = false;
-      // Clear all polling intervals to prevent memory leaks
       Object.values(pollingRefs.current).forEach(clearInterval);
       pollingRefs.current = {};
     };
   }, []);
 
-  /* ================= POLLING (memoized) ================= */
+  // ✅ 2. NEW: Safe Side Effects (This fixes your error)
+  // Instead of setting state inside other state updaters, we watch 'uploadedFiles'
+  useEffect(() => {
+    // Sync Global Context: If any file is completed, app is "Indexed"
+    const hasCompleted = uploadedFiles.some((f) => f.status === "completed");
+    setIndexed(hasCompleted);
+
+    // Sync Loading State: If any file is uploading/processing, we are "Loading"
+    const isBusy = uploadedFiles.some(
+        (f) => f.status === "uploading" || f.status === "processing" || f.status === "pending"
+    );
+    setLoading(isBusy);
+
+  }, [uploadedFiles, setIndexed]);
+
+
+  /* ================= POLLING ================= */
 
   const pollIngestionStatus = useCallback((filename) => {
     if (pollingRefs.current[filename]) return;
 
     const intervalId = setInterval(async () => {
-      // Check if component is still mounted
       if (!isMountedRef.current) {
         clearInterval(intervalId);
         return;
@@ -108,8 +120,10 @@ export default function UploadPDF() {
           return;
         }
 
-        setUploadedFiles((prev) => {
-          const updated = prev.map((f) =>
+        // ✅ FIXED: Only update local state here. 
+        // The useEffect above handles setIndexed and setLoading automatically.
+        setUploadedFiles((prev) => 
+          prev.map((f) =>
             f.name === filename
               ? {
                   ...f,
@@ -119,19 +133,8 @@ export default function UploadPDF() {
                   progress: res.data.status === "completed" ? 100 : f.progress,
                 }
               : f
-          );
-
-          // Enable chat if ANY completed
-          setIndexed(updated.some((f) => f.status === "completed"));
-
-          // Auto-unlock upload UI
-          const stillBusy = updated.some(
-            (f) => f.status === "uploading" || f.status === "processing" || f.status === "pending"
-          );
-          setLoading(stillBusy);
-
-          return updated;
-        });
+          )
+        );
 
         if (res.data.status === "completed" || res.data.status === "failed") {
           clearInterval(intervalId);
@@ -140,27 +143,22 @@ export default function UploadPDF() {
       } catch {
         clearInterval(intervalId);
         delete pollingRefs.current[filename];
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
       }
     }, POLLING_INTERVAL);
 
     pollingRefs.current[filename] = intervalId;
-  }, [setIndexed]);
+  }, []);
 
-  /* ================= UPLOAD (memoized) ================= */
+  /* ================= UPLOAD ================= */
 
   const handleUpload = useCallback(async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset input to allow re-uploading same file
     e.target.value = "";
-
     setError(null);
-    setLoading(true);
-
+    // Note: setLoading(true) is handled automatically by the useEffect when we add the file below
+    
     setUploadedFiles((prev) => [
       ...prev,
       { name: file.name, progress: 0, status: "uploading" },
@@ -184,12 +182,11 @@ export default function UploadPDF() {
             f.name === file.name ? { ...f, status: "failed" } : f
           )
         );
-        setLoading(false);
       }
     }
   }, [pollIngestionStatus]);
 
-  /* ================= DELETE (memoized) ================= */
+  /* ================= DELETE ================= */
 
   const removePDF = useCallback(async (filename) => {
     try {
@@ -202,51 +199,39 @@ export default function UploadPDF() {
 
       if (!isMountedRef.current) return;
 
-      setUploadedFiles((prev) => {
-        const next = prev.filter((f) => f.name !== filename);
-        setIndexed(next.some((f) => f.status === "completed"));
-        return next;
-      });
+      // ✅ FIXED: Just filter the list. The useEffect handles the rest.
+      setUploadedFiles((prev) => prev.filter((f) => f.name !== filename));
 
-      setLoading(false);
     } catch {
       if (isMountedRef.current) {
         setError("Failed to delete PDF");
-        setLoading(false);
       }
     }
-  }, [setIndexed]);
+  }, []);
 
-  /* ================= RESET (memoized) ================= */
+  /* ================= RESET ================= */
 
   const resetAll = useCallback(async () => {
     try {
       await resetPDFs();
 
-      // Clear all polling intervals
       Object.values(pollingRefs.current).forEach(clearInterval);
       pollingRefs.current = {};
 
       if (!isMountedRef.current) return;
 
       setUploadedFiles([]);
-      setIndexed(false);
-      setLoading(false);
     } catch {
       if (isMountedRef.current) {
         setError("Failed to reset PDFs");
-        setLoading(false);
       }
     }
-  }, [setIndexed]);
+  }, []);
 
-  /* ================= DERIVED STATE (memoized) ================= */
-
-  const hasCompletedFiles = useMemo(
-    () => uploadedFiles.some((f) => f.status === "completed"),
-    [uploadedFiles]
-  );
-
+  // ══════════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ══════════════════════════════════════════════════════════════════════════════
+  
   return (
     <motion.div
       variants={cardVariants}
@@ -254,7 +239,6 @@ export default function UploadPDF() {
       animate="visible"
       className="h-full w-full"
     >
-      {/* <Card className="h-full flex flex-col shadow-lg border-0 bg-gradient-to-br from-white to-blue-50 hover:shadow-xl transition-shadow"> */}
       <Card className="h-full flex flex-col shadow-lg border-0 bg-gradient-to-br from-white to-blue-50 dark:bg-gradient-to-br dark:from-neutral-950 dark:via-black dark:to-black dark:border dark:border-neon-500/30 dark:shadow-2xl dark:shadow-neon/20 hover:shadow-xl transition-all duration-300 dark:hover:border-neon-500/50 dark:hover:shadow-neon-lg">
 
         <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-neon-600 dark:to-neon-700 text-white rounded-t-lg p-3 sm:p-4 transition-colors duration-300">
@@ -308,57 +292,6 @@ export default function UploadPDF() {
             )}
           </AnimatePresence>
 
-          {/* LOADING PROGRESS
-          <AnimatePresence>
-            {loading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-2"
-              >
-                <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
-                    style={{ width: `${progress}%` }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-                <motion.p
-                  className="text-xs text-center font-medium text-gray-600"
-                  animate={{ opacity: [0.7, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                >
-                  Indexing document… {progress}%
-                </motion.p>
-              </motion.div>
-            )}
-          </AnimatePresence> */}
-
-          {/* SUCCESS STATE */}
-          {/* <AnimatePresence>
-            {completedFiles.length > 0 && (
-              <motion.div
-                variants={successVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-neon-950/60 dark:to-neon-900/40 border-2 border-green-300 dark:border-neon-500/50 rounded-lg p-3 sm:p-4 space-y-2 transition-all duration-300"
-              >
-                <p className="text-xs sm:text-sm font-bold text-green-700 dark:text-neon-400 flex items-center gap-2">
-                  <span className="text-lg sm:text-xl">✓</span> PDF Indexed Successfully
-                </p>
-                <div className="text-xs text-green-700 dark:text-neon-300 space-y-1 break-words">
-                  {completedFiles.map((f) => (
-                    <p>📁 <strong className="break-all">{f.name}</strong>
-                      📄 Pages: <strong>{f.pages}</strong></p>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence> */}
-
           {/* MULTI PDF LIST - WITH SCROLLING */}
           {uploadedFiles.length > 0 && (
             <div className="flex-1 flex flex-col min-h-0 text-xs">
@@ -366,14 +299,12 @@ export default function UploadPDF() {
                 Uploaded PDFs ({uploadedFiles.length})
               </p>
 
-              {/* Scrollable PDF list container */}
               <div className="flex-1 overflow-y-auto max-h-48 space-y-2 pr-1 scrollbar-thin scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-neutral-600">
                 {uploadedFiles.map((f) => (
                   <FileItem key={f.name} file={f} onDelete={removePDF} />
                 ))}
               </div>
 
-              {/* Reset button - always visible at bottom */}
               <Button
                 variant="outline"
                 size="sm"
