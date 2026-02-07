@@ -17,15 +17,15 @@ const cardVariants = {
 
 const sectionVariants = {
   hidden: { opacity: 0, height: 0, overflow: "hidden" },
-  visible: { 
-    opacity: 1, 
-    height: "auto", 
-    transition: { duration: 0.3, ease: "easeInOut" } 
+  visible: {
+    opacity: 1,
+    height: "auto",
+    transition: { duration: 0.3, ease: "easeInOut" }
   },
-  exit: { 
-    opacity: 0, 
-    height: 0, 
-    transition: { duration: 0.2, ease: "easeInOut" } 
+  exit: {
+    opacity: 0,
+    height: 0,
+    transition: { duration: 0.2, ease: "easeInOut" }
   }
 };
 
@@ -54,11 +54,10 @@ const MarkButton = memo(({ mark, isActive, onClick }) => (
     whileHover={{ scale: 1.03 }}
     whileTap={{ scale: 0.97 }}
     onClick={onClick}
-    className={`py-3 px-2 rounded-lg font-semibold text-xs transition-all duration-300 flex flex-col items-center justify-center ${
-      isActive
+    className={`py-3 px-2 rounded-lg font-semibold text-xs transition-all duration-300 flex flex-col items-center justify-center ${isActive
         ? `bg-gradient-to-r ${marksConfig[mark].color} ${marksConfig[mark].darkColor} text-white shadow-lg dark:shadow-neon`
         : "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 border border-gray-300 dark:border-neon-500/40 hover:bg-gray-200 dark:hover:bg-neutral-700"
-    }`}
+      }`}
   >
     <span className="text-lg mb-0.5">{marksConfig[mark].icon}</span>
     <span className="font-bold">{mark} Marks</span>
@@ -68,14 +67,14 @@ const MarkButton = memo(({ mark, isActive, onClick }) => (
 
 // Custom Toggle Switch to avoid dependency issues
 const MotionSwitch = ({ isOn, onToggle }) => (
-  <div 
+  <div
     onClick={onToggle}
     className={`w-10 h-5 flex items-center bg-gray-300 dark:bg-neutral-700 rounded-full p-1 cursor-pointer transition-colors duration-300 ${isOn ? 'bg-purple-600 dark:bg-neon-600' : ''}`}
   >
-    <motion.div 
+    <motion.div
       layout
       transition={{ type: "spring", stiffness: 700, damping: 30 }}
-      className={`bg-white w-3 h-3 rounded-full shadow-md ${isOn ? 'ml-auto' : ''}`} 
+      className={`bg-white w-3 h-3 rounded-full shadow-md ${isOn ? 'ml-auto' : ''}`}
     />
   </div>
 );
@@ -86,13 +85,13 @@ const MotionSwitch = ({ isOn, onToggle }) => (
 
 export default function StudyPanel() {
   const { syllabusText, setSyllabusText, marks, setMarks, clearSyllabus } = useApp();
-  
+
   // Local state
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  
+
   // NEW: State for toggling Study Mode
   const [isStudyMode, setIsStudyMode] = useState(false);
 
@@ -154,10 +153,10 @@ export default function StudyPanel() {
     try {
       const res = await uploadSyllabus(file);
       if (!isMountedRef.current) return;
-      
+
       const { subject, units } = res.data;
       let textContent = subject ? `Subject: ${subject}\n\n` : "";
-      
+
       if (units && units.length > 0) {
         units.forEach((unit) => {
           textContent += `${unit.name}\n`;
@@ -167,7 +166,7 @@ export default function StudyPanel() {
           textContent += "\n";
         });
       }
-      
+
       setSyllabusText(textContent.trim());
       setUploadSuccess(true);
       setFile(null);
@@ -209,9 +208,9 @@ export default function StudyPanel() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm sm:text-base font-semibold flex items-center gap-2">
               <span className="text-xl">📋</span>
-              <span>Study Panel</span>
+              <span className="text-white">Study Panel</span>
             </CardTitle>
-            
+
             {/* ENABLE/DISABLE TOGGLE */}
             <div className="flex items-center gap-2 bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm">
               <span className="text-[10px] font-medium opacity-90">
@@ -225,7 +224,7 @@ export default function StudyPanel() {
         <CardContent className="p-3 sm:p-4 flex-1 flex flex-col overflow-hidden min-h-0">
           <ScrollArea className="flex-1 w-full pr-2">
             <div className="space-y-4">
-              
+
               {/* ═══════════ ANSWER LENGTH (ALWAYS VISIBLE) ═══════════ */}
               <div className="space-y-2">
                 <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-neutral-200 flex items-center gap-1.5">
@@ -233,11 +232,11 @@ export default function StudyPanel() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[3, 5, 12].map((m) => (
-                    <MarkButton 
-                      key={m} 
-                      mark={m} 
-                      isActive={marks === m} 
-                      onClick={() => handleMarkChange(m)} 
+                    <MarkButton
+                      key={m}
+                      mark={m}
+                      isActive={marks === m}
+                      onClick={() => handleMarkChange(m)}
                     />
                   ))}
                 </div>
@@ -288,11 +287,10 @@ export default function StudyPanel() {
                           />
                           <label
                             htmlFor="syllabus-upload"
-                            className={`block w-full px-3 py-2 rounded-lg border-2 border-dashed text-center transition-all cursor-pointer text-xs truncate ${
-                              loading
+                            className={`block w-full px-3 py-2 rounded-lg border-2 border-dashed text-center transition-all cursor-pointer text-xs truncate ${loading
                                 ? "border-gray-300 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-800"
                                 : "border-purple-400 dark:border-neon-500/50 bg-purple-50 dark:bg-neutral-800 hover:border-purple-600"
-                            }`}
+                              }`}
                           >
                             {file ? file.name : "Choose file..."}
                           </label>

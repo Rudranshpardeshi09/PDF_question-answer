@@ -73,7 +73,7 @@ export default function ChatWindow() {
       animate="visible"
       className="h-full flex flex-col bg-gradient-to-br from-white via-blue-50 to-indigo-50 dark:bg-gradient-to-br dark:from-neutral-950 dark:via-black dark:to-black dark:border dark:border-neon-500/30 dark:shadow-2xl dark:shadow-neon/20 rounded-xl border-0 shadow-xl overflow-hidden transition-all duration-300 dark:hover:border-neon-500/50 dark:hover:shadow-neon-lg"
     >
-      
+
       {/* HEADER */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -83,7 +83,7 @@ export default function ChatWindow() {
       >
         <h2 className="font-bold text-sm sm:text-lg flex items-center gap-1 sm:gap-2">
           <span className="text-xl sm:text-2xl">✨</span>
-          <span>Study Assistant</span>
+          <span className="text-white">Study Assistant</span>
         </h2>
         <motion.p
           initial={{ opacity: 0 }}
@@ -92,7 +92,7 @@ export default function ChatWindow() {
         >
           {indexed ? (
             <>
-              📚 PDFs ready • 
+              📚 PDFs ready •
               {syllabusText ? " 📋 Syllabus loaded • " : " "}
               {marks === 3 ? "📝 Short" : marks === 5 ? "📄 Medium" : "📚 Long"} answers
             </>
@@ -103,61 +103,60 @@ export default function ChatWindow() {
       </motion.div>
 
       {/* MESSAGES SCROLL AREA */}
-      {/* MESSAGES SCROLL AREA */}
-<div className="flex-1 min-h-0">
-  <ScrollArea className="h-full w-full scrollbar-thin">
-    <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 pr-2 sm:pr-8">
-      
-      {messages.length === 0 && (
-        <motion.div
-          animate={{ opacity: [0.6, 1] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="h-full flex items-center justify-center"
-        >
-          <div className="text-center">
-            <p className="text-2xl mb-2">🎓</p>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-400 px-4">
-              {!indexed
-                ? "Upload a PDF to get started"
-                : "Ask any question about your uploaded documents!"}
-            </p>
-            {indexed && !syllabusText && (
-              <p className="text-[10px] text-gray-500 dark:text-neutral-500 mt-2 px-4">
-                💡 Tip: Add syllabus/topics for more focused answers
-              </p>
-            )}
-          </div>
-        </motion.div>
-      )}
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full w-full scrollbar-thin">
+          <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 pr-2 sm:pr-8">
 
-      <AnimatePresence mode="popLayout">
-        {messages.map((m, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ type: "spring", stiffness: 120, damping: 22 }}
-            className="space-y-2"
-          >
-            <MessageBubble role={m.role} content={m.content} error={m.error} />
-
-            {m.sources && m.sources.length > 0 && (
+            {messages.length === 0 && (
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                animate={{ opacity: [0.6, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="h-full flex items-center justify-center"
               >
-                <SourcesPanel sources={m.sources} />
+                <div className="text-center">
+                  <p className="text-2xl mb-2">🎓</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-neutral-400 px-4">
+                    {!indexed
+                      ? "Upload a PDF to get started"
+                      : "Ask any question about your uploaded documents!"}
+                  </p>
+                  {indexed && !syllabusText && (
+                    <p className="text-[10px] text-gray-500 dark:text-neutral-500 mt-2 px-4">
+                      💡 Tip: Add syllabus/topics for more focused answers
+                    </p>
+                  )}
+                </div>
               </motion.div>
             )}
-          </motion.div>
-        ))}
-      </AnimatePresence>
 
-      <div ref={messagesEndRef} />
-    </div>
-  </ScrollArea>
-</div>
+            <AnimatePresence mode="popLayout">
+              {messages.map((m, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ type: "spring", stiffness: 120, damping: 22 }}
+                  className="space-y-2"
+                >
+                  <MessageBubble role={m.role} content={m.content} error={m.error} />
+
+                  {m.sources && m.sources.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                    >
+                      <SourcesPanel sources={m.sources} />
+                    </motion.div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+      </div>
 
 
       {/* INPUT AREA */}
@@ -167,8 +166,8 @@ export default function ChatWindow() {
         transition={{ delay: 0.2 }}
         className="flex-shrink-0 border-t border-blue-200 dark:border-neon-500/30 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-neutral-950 dark:to-black transition-colors duration-300"
       >
-        <ChatInput 
-          onSend={sendQuestion} 
+        <ChatInput
+          onSend={sendQuestion}
           disabled={!indexed}
         />
       </motion.div>

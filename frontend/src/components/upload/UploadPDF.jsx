@@ -243,7 +243,7 @@ export default function UploadPDF() {
         <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-neon-600 dark:to-neon-700 text-white rounded-t-lg p-3 sm:p-4 transition-colors duration-300">
           <CardTitle className="text-sm sm:text-base font-semibold flex items-center gap-1 sm:gap-2">
             <span className="text-xl sm:text-2xl">📄</span>
-            <span>Upload PDF</span>
+            <span className="text-white">Upload PDF</span>
           </CardTitle>
         </CardHeader>
 

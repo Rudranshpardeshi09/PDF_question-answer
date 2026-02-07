@@ -1,4 +1,4 @@
-cd  fastapi
+fastapi
 uvicorn
 python-dotenv
 python-multipart
