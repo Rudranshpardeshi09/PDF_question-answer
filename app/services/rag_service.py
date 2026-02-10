@@ -1,150 +1,125 @@
+"""
+Optimized RAG Pipeline
+- Reduced document count for speed
+- Streamlined context building
+- Faster keyword extraction
+"""
 from app.rag.prompts import RAG_PROMPT
 from app.rag.retriever import get_retriever
 from app.services.gemini_llm import generate_text
 import re
 
 
-def extract_keywords(text: str) -> list:
-    """Extract meaningful keywords from text."""
-    # Remove special chars and split into words
-    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
-    return list(set(words))
+def extract_keywords(text: str) -> set:
+    """Extract meaningful keywords from text (optimized)."""
+    # Simple word extraction - faster than regex for common cases
+    words = set()
+    for word in text.lower().split():
+        cleaned = ''.join(c for c in word if c.isalpha())
+        if len(cleaned) >= 3:
+            words.add(cleaned)
+    return words
 
 
-def semantic_similarity_score(doc_content: str, question: str) -> float:
-    """
-    Calculate semantic similarity between document and question.
-    Uses keyword overlap as a simple but effective heuristic.
-    """
-    question_keywords = set(extract_keywords(question))
-    doc_keywords = set(extract_keywords(doc_content))
-    
+def semantic_similarity_score(doc_content: str, question_keywords: set) -> float:
+    """Calculate semantic similarity (optimized with pre-computed keywords)."""
     if not question_keywords:
         return 0.0
     
+    doc_keywords = extract_keywords(doc_content)
     overlap = len(question_keywords & doc_keywords)
-    similarity = overlap / len(question_keywords)
-    return similarity
+    return overlap / len(question_keywords)
 
 
 def rank_documents(docs: list, question: str) -> list:
-    """
-    Re-rank documents by semantic relevance to the question.
-    This ensures most relevant documents appear first.
-    """
+    """Re-rank documents by semantic relevance (optimized)."""
     if not docs:
         return docs
     
+    # Pre-compute question keywords once
+    question_keywords = extract_keywords(question)
+    
     scored_docs = [
-        (doc, semantic_similarity_score(doc.page_content, question))
+        (doc, semantic_similarity_score(doc.page_content, question_keywords))
         for doc in docs
     ]
     
     # Sort by score descending
     scored_docs.sort(key=lambda x: x[1], reverse=True)
-    
     return [doc for doc, _ in scored_docs]
 
 
 def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int = 3, chat_history: list = None):
     """
-    Production-ready RAG pipeline with conversation memory:
-    
-    1. Retrieve diverse, relevant documents using MMR
-    2. Rank them by semantic relevance to the question
-    3. Build rich context from top documents
-    4. Include conversation history for follow-up questions
-    5. Generate answer with proper formatting
-    6. Extract and return metadata
-    
-    Args:
-        question: The user's question
-        vectorstore: FAISS vectorstore with all PDF embeddings
-        syllabus_context: User-provided syllabus/topics text
-        marks: Answer length (3=short, 5=medium, 12=long)
-        chat_history: List of previous messages [{"role": "user/assistant", "content": "..."}]
+    Optimized RAG pipeline:
+    1. Retrieve relevant documents using MMR
+    2. Rank by semantic relevance
+    3. Build compact context from top 4 documents
+    4. Include chat history for follow-ups
+    5. Generate complete answer
     """
     retriever = get_retriever(vectorstore)
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 1: RETRIEVE - Use question + syllabus context for coverage
+    # STEP 1: RETRIEVE - Single query for speed
     # ════════════════════════════════════════════════════════════════
-    # Search with question keywords (primary)
-    question_docs = retriever.invoke(question)
+    # Combine question with syllabus hint if available
+    search_query = question
+    if syllabus_context and len(syllabus_context) > 20:
+        # Add first 100 chars of syllabus as context hint
+        search_query = f"{syllabus_context[:100]} {question}"
     
-    # Search with syllabus context if provided (secondary)
-    context_docs_extra = []
-    if syllabus_context and len(syllabus_context) > 10:
-        # Extract key terms from syllabus for better retrieval
-        syllabus_terms = syllabus_context[:500]  # Limit to prevent too broad search
-        context_docs_extra = retriever.invoke(f"{syllabus_terms} {question}")
-    
-    # Merge and deduplicate (keep unique by content)
-    combined_docs = question_docs + context_docs_extra
-    unique_docs = []
-    seen_content = set()
-    
-    for doc in combined_docs:
-        content_hash = hash(doc.page_content)
-        if content_hash not in seen_content:
-            unique_docs.append(doc)
-            seen_content.add(content_hash)
+    docs = retriever.invoke(search_query)
 
-    if not unique_docs:
+    if not docs:
         return {
-            "answer": (
-                f"I couldn't find relevant information about '{question}' in the uploaded documents. "
-                "Try asking differently or upload more relevant PDFs."
-            ),
+            "answer": f"I couldn't find relevant information about '{question}' in the uploaded documents.",
             "pages": [],
             "sources": [],
             "error": True
         }
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 2: RANK - Sort by semantic relevance to question
+    # STEP 2: RANK - Sort by semantic relevance
     # ════════════════════════════════════════════════════════════════
-    ranked_docs = rank_documents(unique_docs, question)
+    ranked_docs = rank_documents(docs, question)
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 3: BUILD CONTEXT - Combine top documents with separators
+    # STEP 3: BUILD CONTEXT - Top 4 documents only (optimized for speed)
     # ════════════════════════════════════════════════════════════════
-    # Use top 6 documents (quality over quantity)
-    top_docs = ranked_docs[:6]
+    top_docs = ranked_docs[:4]
     
     context_parts = []
     for i, doc in enumerate(top_docs, 1):
         page_info = doc.metadata.get("page", "N/A")
         source_file = doc.metadata.get("source", "Unknown")
-        # Extract just filename from path
         if isinstance(source_file, str):
             source_file = source_file.split("/")[-1].split("\\")[-1]
-        context_parts.append(
-            f"[Source {i} - {source_file}, Page {page_info}]\n{doc.page_content}"
-        )
+        # Limit content per doc to prevent overly long prompts
+        content = doc.page_content[:800] if len(doc.page_content) > 800 else doc.page_content
+        context_parts.append(f"[Source {i} - {source_file}, Page {page_info}]\n{content}")
     
-    context = "\n\n" + "─" * 70 + "\n\n".join(context_parts)
+    context = "\n\n---\n\n".join(context_parts)
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 3.5: FORMAT CHAT HISTORY - Include conversation context
+    # STEP 4: FORMAT CHAT HISTORY - Compact format
     # ════════════════════════════════════════════════════════════════
     formatted_chat_history = "No previous conversation."
     if chat_history and len(chat_history) > 0:
-        # Limit to last 15 messages to maintain conversation context
-        recent_history = chat_history[-15:]
+        # Limit to last 10 messages for speed
+        recent_history = chat_history[-10:]
         history_parts = []
         for msg in recent_history:
             role = "Student" if msg["role"] == "user" else "Tutor"
-            # Truncate long messages to save context space
-            content = msg["content"][:500] + "..." if len(msg["content"]) > 500 else msg["content"]
+            # Shorter truncation
+            content = msg["content"][:300] + "..." if len(msg["content"]) > 300 else msg["content"]
             history_parts.append(f"{role}: {content}")
         formatted_chat_history = "\n".join(history_parts)
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 4: GENERATE - Create prompt and call LLM
+    # STEP 5: GENERATE - Create prompt and call LLM
     # ════════════════════════════════════════════════════════════════
-    # Format syllabus context for prompt
-    formatted_syllabus = syllabus_context.strip() if syllabus_context else "No specific syllabus provided - answer based on all available content."
+    formatted_syllabus = syllabus_context.strip() if syllabus_context else "No syllabus provided."
     
     prompt = RAG_PROMPT.format(
         syllabus_context=formatted_syllabus,
@@ -165,17 +140,13 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
         }
 
     # ════════════════════════════════════════════════════════════════
-    # STEP 5: EXTRACT METADATA - Pages and sources
+    # STEP 6: EXTRACT METADATA
     # ════════════════════════════════════════════════════════════════
-    pages = sorted({
-        str(doc.metadata.get("page", "N/A"))
-        for doc in top_docs
-    })
-
+    pages = sorted({str(doc.metadata.get("page", "N/A")) for doc in top_docs})
     sources = [
         {
             "page": doc.metadata.get("page", "N/A"),
-            "text": doc.page_content[:250]
+            "text": doc.page_content[:200]
         }
         for doc in top_docs
     ]
