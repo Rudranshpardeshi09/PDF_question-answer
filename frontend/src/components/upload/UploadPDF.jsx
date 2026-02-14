@@ -171,6 +171,13 @@ export default function UploadPDF() {
     e.target.value = "";
     setError(null);
 
+    // validate file size on client side first (before uploading)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB > 50MB limit)`);
+      return;
+    }
+
     // add the file to our list immediately with "uploading" status
     setUploadedFiles((prev) => [
       ...prev,
@@ -191,14 +198,16 @@ export default function UploadPDF() {
 
       // start checking if the backend is done processing the file
       pollIngestionStatus(file.name);
-    } catch {
+    } catch (err) {
       // mark the file as failed if upload didnt work
       if (isMountedRef.current) {
+        const errorMsg = err.response?.data?.detail || err.message || "Upload failed";
         setUploadedFiles((prev) =>
           prev.map((f) =>
-            f.name === file.name ? { ...f, status: "failed" } : f
+            f.name === file.name ? { ...f, status: "failed", error: errorMsg } : f
           )
         );
+        setError(`Upload error: ${errorMsg}`);
       }
     }
   }, [pollIngestionStatus]);
@@ -219,15 +228,20 @@ export default function UploadPDF() {
 
       // remove the file from our local list
       setUploadedFiles((prev) => prev.filter((f) => f.name !== filename));
-    } catch {
+      setError(null);  // clear any error state
+    } catch (err) {
       if (isMountedRef.current) {
-        setError("Failed to delete PDF");
+        setError(`Failed to delete ${filename}: ${err.response?.data?.detail || err.message}`);
       }
     }
   }, []);
 
   // deletes ALL uploaded PDFs and starts fresh
   const resetAll = useCallback(async () => {
+    if (!window.confirm("Are you sure you want to delete all PDFs and reset the system? This cannot be undone.")) {
+      return;  // user cancelled
+    }
+    
     try {
       // tell backend to wipe everything
       await resetPDFs();
@@ -238,11 +252,12 @@ export default function UploadPDF() {
 
       if (!isMountedRef.current) return;
 
-      // clear the local file list
+      // clear the local file list and error
       setUploadedFiles([]);
-    } catch {
+      setError(null);
+    } catch (err) {
       if (isMountedRef.current) {
-        setError("Failed to reset PDFs");
+        setError(`Failed to reset PDFs: ${err.response?.data?.detail || err.message}`);
       }
     }
   }, []);

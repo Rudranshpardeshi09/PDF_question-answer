@@ -3,6 +3,7 @@ from langchain_core.prompts import PromptTemplate
 
 # this is the main prompt template that tells the AI how to answer questions
 # it gets filled in with the actual question, context from PDFs, chat history etc
+# Created once at module load time to avoid repeated instantiation
 RAG_PROMPT = PromptTemplate(
     # these are the placeholders that get replaced with actual values
     input_variables=[

@@ -9,19 +9,32 @@ export default function ChatInput({ onSend, disabled }) {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleSend = async () => {
-    if (!text.trim() || disabled || isLoading) return;
+    // validate: text must not be empty or only whitespace
+    const trimmedText = text.trim();
+    if (!trimmedText || disabled || isLoading) return;
+    
+    // prevent excessively long messages
+    if (trimmedText.length > 1000) {
+      alert("Question is too long (max 1000 characters)");
+      return;
+    }
 
     setIsLoading(true);
     try {
-      await onSend(text);
+      // send the validated, trimmed text
+      await onSend(trimmedText);
       setText("");
+    } catch (err) {
+      // error is handled in parent component, but we still need to clear loading state
+      console.error("Send error:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !disabled && !isLoading) {
+    // send on Enter, but not on Shift+Enter (for multiline)
+    if (e.key === "Enter" && !e.shiftKey && !disabled && !isLoading && text.trim()) {
       e.preventDefault();
       handleSend();
     }
@@ -59,6 +72,7 @@ export default function ChatInput({ onSend, disabled }) {
               ? "opacity-50 cursor-not-allowed"
               : "bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-neon-600 dark:to-neon-500 text-white hover:shadow-lg dark:hover:shadow-neon"
           }`}
+          title={disabled ? "Upload PDFs first" : "Send question (Enter)"}
         >
           {isLoading ? (
           <span className="inline-flex items-center gap-1.5">

@@ -33,8 +33,17 @@ class Settings:
     
     # max file size for uploads is 50MB
     MAX_FILE_SIZE: int = 50 * 1024 * 1024
-    # only PDF files are allowed for upload
-    ALLOWED_FILE_TYPES: set = {"application/pdf"}
+    # PDF and DOCX files are allowed for upload (configuration now matches actual implementation)
+    ALLOWED_FILE_TYPES: set = {"application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+    # whitelist for file extensions as additional validation layer
+    ALLOWED_FILE_EXTENSIONS: set = {".pdf", ".docx"}
+    
+    # request timeout for API calls (in seconds)
+    REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "300"))
+    # maximum chat history messages to keep in context (must be even number)
+    MAX_CHAT_HISTORY: int = int(os.getenv("MAX_CHAT_HISTORY", "10"))
+    # rate limiting: max requests per minute per IP (0 = disabled)
+    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "0"))
 
 # creating a single settings instance that the whole app uses
 settings = Settings()

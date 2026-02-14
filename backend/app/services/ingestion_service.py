@@ -5,6 +5,10 @@ from langchain_community.document_loaders import PyPDFLoader
 from app.rag.chunking import chunk_documents
 from app.vectorstore.faiss_store import save_vectorstore
 from fastapi import UploadFile
+import threading
+
+# lock to prevent concurrent vectorstore modifications during ingestion
+_ingestion_lock = threading.Lock()
 
 logger = logging.getLogger(__name__)
 # folder where all uploaded PDFs are stored
@@ -53,16 +57,18 @@ def ingest_pdf(input_source):
 
         # make sure we actually got some text from the file
         if not documents:
-            raise ValueError("PDF file is empty or unreadable")
+            raise ValueError(f"PDF file '{filename}' is empty or unreadable - no text could be extracted")
 
         total_pages = len(documents)
         logger.info(f"Loaded {total_pages} pages from {filename}")
 
         # split the documents into smaller chunks for better search results
         chunks = chunk_documents(documents)
+        if not chunks:
+            raise ValueError("No chunks created from document")
         logger.info(f"Created {len(chunks)} chunks")
 
-        # save the chunks to our vector database so they can be searched later
+        # save the chunks to our vector database so they can be searched later (with thread safety)
         save_vectorstore(chunks)
         logger.info(f"Successfully ingested {filename}")
 

@@ -3,7 +3,11 @@
 from app.rag.prompts import RAG_PROMPT
 from app.rag.retriever import get_retriever
 from app.services.gemini_llm import generate_text
+from app.core.config import settings
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # pulls out important words from a piece of text
@@ -73,9 +77,16 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
 
     # STEP 2: re-rank the results so the best matches come first
     ranked_docs = rank_documents(docs, question)
+    if not ranked_docs:
+        return {
+            "answer": f"I couldn't find relevant information about '{question}' in the uploaded documents after ranking.",
+            "pages": [],
+            "sources": [],
+            "error": True
+        }
 
-    # STEP 3: take only the top 4 documents to keep things fast
-    top_docs = ranked_docs[:4]
+    # STEP 3: take only the top documents to keep things fast (use TOP_K from settings)
+    top_docs = ranked_docs[:settings.TOP_K]
     
     # build the context string that will be sent to the AI
     context_parts = []
@@ -95,8 +106,8 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
     # STEP 4: format the chat history so the AI remembers previous messages
     formatted_chat_history = "No previous conversation."
     if chat_history and len(chat_history) > 0:
-        # only keep the last 10 messages to save processing time
-        recent_history = chat_history[-10:]
+        # only keep the last MAX_CHAT_HISTORY messages to save processing time
+        recent_history = chat_history[-settings.MAX_CHAT_HISTORY:] if len(chat_history) > settings.MAX_CHAT_HISTORY else chat_history
         history_parts = []
         for msg in recent_history:
             role = "Student" if msg["role"] == "user" else "Tutor"
@@ -119,10 +130,14 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
 
     # send to Gemini AI and get the answer
     try:
+        logger.info(f"Sending RAG request with {len(context)} chars context and marks={marks}")
         response = generate_text(prompt)
+        if not response:
+            raise ValueError("Empty response from Gemini")
     except Exception as e:
+        logger.error(f"Error generating response: {str(e)}")
         return {
-            "answer": f"Error generating response: {str(e)}",
+            "answer": f"Error generating response. Please try again: {str(e)[:100]}",
             "pages": [],
             "sources": [],
             "error": True

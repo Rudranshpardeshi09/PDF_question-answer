@@ -1,5 +1,8 @@
 # this file handles all communication with Google's Gemini AI
 import google.generativeai as genai
+import warnings
+# Suppress the deprecation warning for google.generativeai
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
 from functools import lru_cache
 from app.core.config import settings
 import logging
@@ -15,8 +18,9 @@ def get_working_model():
         raise RuntimeError("GEMINI_API_KEY is not configured")
     
     try:
-        # connect to Gemini with our API key
+        # connect to Gemini with our API key (don't log the actual key!)
         genai.configure(api_key=settings.GEMINI_API_KEY)
+        logger.info("Gemini API configured")
         
         # loop through available models and pick the first one that can generate text
         for model in genai.list_models():
@@ -36,6 +40,9 @@ def generate_text(prompt: str, temperature: float = 0.3, max_tokens: int = 4096)
     # make sure we got a valid prompt
     if not prompt or not isinstance(prompt, str):
         raise ValueError("Prompt must be a non-empty string")
+    
+    if len(prompt) > 100000:
+        raise ValueError("Prompt exceeds maximum length (100K characters)")
     
     try:
         # get our cached Gemini model
@@ -61,7 +68,7 @@ def generate_text(prompt: str, temperature: float = 0.3, max_tokens: int = 4096)
         )
         
         # if the response is empty, something went wrong
-        if not response.text:
+        if not response or not response.text:
             logger.warning("Empty response from Gemini")
             raise ValueError("Empty response from model")
         

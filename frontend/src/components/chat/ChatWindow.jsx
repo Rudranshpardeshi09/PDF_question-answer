@@ -46,6 +46,12 @@ export default function ChatWindow() {
       return;
     }
 
+    // validate question
+    if (!q || typeof q !== "string" || q.trim().length === 0) {
+      console.warn("Invalid question");
+      return;
+    }
+
     // add the users question to the chat immediately
     setMessages((m) => [...m, { role: "user", content: q }]);
 
@@ -53,24 +59,30 @@ export default function ChatWindow() {
       // send the question to the backend with syllabus context and chat history
       const res = await askQuestion(q, syllabusText, marks, messages);
 
+      // validate response
+      if (!res.data) {
+        throw new Error("Empty response from server");
+      }
+
       // add the AI's response to the chat
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content: res.data.answer,
-          sources: res.data.sources,  // include source references
-          error: res.data.error,
+          content: res.data.answer || "No response generated",
+          sources: res.data.sources || [],
+          error: res.data.error === true,  // explicitly check for true
         },
       ]);
     } catch (error) {
       // if something goes wrong, show an error message in the chat
       console.error("Error asking question:", error);
+      const errorMessage = error.response?.data?.detail || error.message || "Failed to get answer. Please try again.";
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content: `⚠️ Error: ${error.response?.data?.detail || "Failed to get answer. Please try again."}`,
+          content: `⚠️ Error: ${errorMessage}`,
           error: true,
         },
       ]);

@@ -4,6 +4,7 @@ from app.api.schemas.qa import QARequest, QAResponse
 from app.services.rag_service import run_rag
 from app.vectorstore.faiss_store import load_vectorstore
 import os
+# importing settings separately as it might be used differently
 from app.core.config import settings
 import logging
 
@@ -29,6 +30,12 @@ async def ask_question(request: QARequest):
                 detail="Question is too long (max 1000 characters)"
             )
         
+        # enforce chat history limit
+        if request.chat_history and len(request.chat_history) > settings.MAX_CHAT_HISTORY:
+            logger.warning(f"Chat history exceeds limit: {len(request.chat_history)} > {settings.MAX_CHAT_HISTORY}")
+            # truncate to most recent messages
+            request.chat_history = request.chat_history[-settings.MAX_CHAT_HISTORY:]
+        
         # make sure marks value is reasonable
         if request.marks is not None and (request.marks < 0 or request.marks > 100):
             raise HTTPException(
@@ -48,10 +55,11 @@ async def ask_question(request: QARequest):
         try:
             vectorstore = load_vectorstore()
         except Exception as e:
-            logger.error(f"Failed to load vectorstore: {str(e)}")
+            error_msg = f"Failed to load vectorstore: {str(e)}"
+            logger.error(error_msg)
             raise HTTPException(
                 status_code=500,
-                detail="Failed to load vectorstore. Please re-upload documents."
+                detail="Failed to load vectorstore. Please try re-uploading documents."
             )
         
         # if the database is empty, ask the user to upload PDFs first
@@ -67,13 +75,20 @@ async def ask_question(request: QARequest):
             chat_history = [{"role": msg.role, "content": msg.content} for msg in request.chat_history]
         
         # run the RAG pipeline to get the answer
-        result = run_rag(
-            question=request.question.strip(),
-            vectorstore=vectorstore,
-            syllabus_context=request.syllabus_context or "",
-            marks=request.marks or 3,
-            chat_history=chat_history
-        )
+        try:
+            result = run_rag(
+                question=request.question.strip(),
+                vectorstore=vectorstore,
+                syllabus_context=request.syllabus_context or "",
+                marks=request.marks or 3,
+                chat_history=chat_history
+            )
+        except Exception as e:
+            logger.error(f"RAG pipeline error: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Error processing your question. Please try again."
+            )
         
         # if the RAG pipeline returned an error, pass it to the frontend
         if result.get("error"):
