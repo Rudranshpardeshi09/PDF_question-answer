@@ -1,11 +1,18 @@
-# importing FastAPI framework and required modules
+import os
+import logging
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 # importing our API route handlers
 from app.api.routes import ingest, qa, syllabus
-import os
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 # creating the main FastAPI app with a title and version
 app = FastAPI(title="PDF RAG API", version="1.0.0")

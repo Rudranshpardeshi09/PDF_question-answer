@@ -1,33 +1,58 @@
 # this file manages our FAISS vector database where we store PDF embeddings
 # embeddings are numerical representations of text that allow us to search by meaning
 
-import os
 import logging
+import os
+import threading
+
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 # we cache the embeddings model so it only loads once (it takes time to load)
 _embeddings_cache = None
-import threading
 _embeddings_lock = threading.Lock()
+_vectorstore_cache = None
+_vectorstore_fingerprint = None
+_vectorstore_lock = threading.RLock()
+
+
+def _get_vectorstore_fingerprint():
+    faiss_path = os.path.join(settings.VECTOR_DB_PATH, "index.faiss")
+    pkl_path = os.path.join(settings.VECTOR_DB_PATH, "index.pkl")
+    if not (os.path.exists(faiss_path) and os.path.exists(pkl_path)):
+        return None
+    return (
+        os.path.getmtime(faiss_path),
+        os.path.getmtime(pkl_path),
+        os.path.getsize(faiss_path),
+        os.path.getsize(pkl_path),
+    )
+
+
+def _invalidate_vectorstore_cache():
+    global _vectorstore_cache, _vectorstore_fingerprint
+    _vectorstore_cache = None
+    _vectorstore_fingerprint = None
 
 
 # loads the embedding model that converts text into numbers the AI can search
 def get_embeddings():
     global _embeddings_cache
-    # only load the model if we havent loaded it before (with thread safety)
     if _embeddings_cache is None:
         with _embeddings_lock:
-            # double-check pattern to prevent multiple loads
             if _embeddings_cache is None:
                 logger.info("Loading embeddings model...")
                 try:
-                    # using a lightweight but good model that runs locally (no API calls needed)
                     _embeddings_cache = HuggingFaceEmbeddings(
-                        model_name="sentence-transformers/all-MiniLM-L6-v2"
+                        model_name="sentence-transformers/all-MiniLM-L6-v2",
+                        encode_kwargs={
+                            "normalize_embeddings": True,
+                            "batch_size": settings.EMBEDDING_BATCH_SIZE,
+                        },
                     )
                     logger.info("Embeddings model loaded successfully")
                 except Exception as e:
@@ -38,60 +63,59 @@ def get_embeddings():
 
 # saves new text chunks into our vector database
 def save_vectorstore(chunks, replace=False):
-    # validate input
     if not chunks:
         logger.warning("Cannot save empty chunk list")
         return
-    
+
     embeddings = get_embeddings()
-    
-    # validate vectorstore path is set
+
     if not settings.VECTOR_DB_PATH:
         raise ValueError("VECTOR_DB_PATH not configured")
-    
-    # ensure directory exists
+
     os.makedirs(os.path.dirname(settings.VECTOR_DB_PATH) or ".", exist_ok=True)
-    
-    # if we already have a database and we're not replacing it, merge new data in
-    if not replace and os.path.exists(settings.VECTOR_DB_PATH):
-        try:
-            # load the existing database
-            logger.info("Loading existing vectorstore to merge new documents...")
-            existing_db = FAISS.load_local(
-                settings.VECTOR_DB_PATH,
-                embeddings,
-                allow_dangerous_deserialization=True  # needed for loading saved FAISS files
-            )
-            
-            # create a new database from the new chunks
-            new_db = FAISS.from_documents(chunks, embeddings)
-            
-            # combine old and new data together
-            existing_db.merge_from(new_db)
-            
-            # save the combined database back to disk
-            existing_db.save_local(settings.VECTOR_DB_PATH)
-            logger.info(f"Merged {len(chunks)} new chunks into existing vectorstore")
-            
-        except Exception as e:
-            # if merging fails, log warning and create fresh database
-            logger.error(f"Failed to merge vectorstore: {e}. Creating fresh database...")
+
+    with _vectorstore_lock:
+        if not replace and os.path.exists(settings.VECTOR_DB_PATH):
             try:
-                db = FAISS.from_documents(chunks, embeddings)
-                db.save_local(settings.VECTOR_DB_PATH)
-                logger.info(f"Successfully created fresh vectorstore with {len(chunks)} chunks")
-            except Exception as e2:
-                logger.error(f"Failed to create vectorstore: {e2}")
-                raise
-    else:
-        # first time upload or explicit replace - create a brand new database
+                logger.info("Loading existing vectorstore to merge new documents...")
+                existing_db = FAISS.load_local(
+                    settings.VECTOR_DB_PATH,
+                    embeddings,
+                    allow_dangerous_deserialization=True,
+                )
+
+                existing_chunk_ids = {
+                    doc.metadata.get("chunk_id")
+                    for doc in existing_db.docstore._dict.values()
+                    if getattr(doc, "metadata", None)
+                }
+                filtered_chunks = [
+                    chunk
+                    for chunk in chunks
+                    if chunk.metadata.get("chunk_id") not in existing_chunk_ids
+                ]
+
+                if not filtered_chunks:
+                    logger.info("Skipped vectorstore merge because all chunks were already indexed")
+                    return
+
+                new_db = FAISS.from_documents(filtered_chunks, embeddings)
+                existing_db.merge_from(new_db)
+                existing_db.save_local(settings.VECTOR_DB_PATH)
+                _invalidate_vectorstore_cache()
+                logger.info("Merged %s new chunks into existing vectorstore", len(filtered_chunks))
+                return
+            except Exception as e:
+                logger.error("Failed to merge vectorstore: %s. Creating fresh database...", e)
+
         try:
-            logger.info(f"Creating new vectorstore with {len(chunks)} chunks...")
+            logger.info("Creating new vectorstore with %s chunks...", len(chunks))
             db = FAISS.from_documents(chunks, embeddings)
             db.save_local(settings.VECTOR_DB_PATH)
+            _invalidate_vectorstore_cache()
             logger.info("Vectorstore created and saved successfully")
         except Exception as e:
-            logger.error(f"Failed to create vectorstore: {e}")
+            logger.error("Failed to create vectorstore: %s", e)
             raise
 
 
@@ -102,21 +126,31 @@ def replace_vectorstore(chunks):
 
 # loads the vector database from disk so we can search it
 def load_vectorstore():
-    # if no database exists yet, return nothing
+    global _vectorstore_cache, _vectorstore_fingerprint
+
     if not os.path.exists(settings.VECTOR_DB_PATH):
-        logger.warning(f"Vectorstore not found at {settings.VECTOR_DB_PATH}")
+        logger.warning("Vectorstore not found at %s", settings.VECTOR_DB_PATH)
         return None
-    
-    try:
-        # load and return the database
-        logger.info(f"Loading vectorstore from {settings.VECTOR_DB_PATH}")
-        db = FAISS.load_local(
-            settings.VECTOR_DB_PATH,
-            get_embeddings(),
-            allow_dangerous_deserialization=True
-        )
-        logger.info("Vectorstore loaded successfully")
-        return db
-    except Exception as e:
-        logger.error(f"Failed to load vectorstore: {e}")
-        raise
+
+    with _vectorstore_lock:
+        fingerprint = _get_vectorstore_fingerprint()
+        if fingerprint is None:
+            return None
+
+        if _vectorstore_cache is not None and _vectorstore_fingerprint == fingerprint:
+            return _vectorstore_cache
+
+        try:
+            logger.info("Loading vectorstore from %s", settings.VECTOR_DB_PATH)
+            db = FAISS.load_local(
+                settings.VECTOR_DB_PATH,
+                get_embeddings(),
+                allow_dangerous_deserialization=True
+            )
+            _vectorstore_cache = db
+            _vectorstore_fingerprint = fingerprint
+            logger.info("Vectorstore loaded successfully")
+            return db
+        except Exception as e:
+            logger.error("Failed to load vectorstore: %s", e)
+            raise

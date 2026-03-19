@@ -1,11 +1,12 @@
 # this is the main RAG (Retrieval Augmented Generation) pipeline
 # it finds relevant content from PDFs and uses AI to answer questions
+import logging
+import time
+
+from app.core.config import settings
 from app.rag.prompts import RAG_PROMPT
 from app.rag.retriever import get_retriever
 from app.services.gemini_llm import generate_text
-from app.core.config import settings
-import re
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +14,8 @@ logger = logging.getLogger(__name__)
 # pulls out important words from a piece of text
 def extract_keywords(text: str) -> set:
     words = set()
-    # split text into words and keep only meaningful ones (3+ letters)
     for word in text.lower().split():
-        cleaned = ''.join(c for c in word if c.isalpha())
+        cleaned = "".join(c for c in word if c.isalpha())
         if len(cleaned) >= 3:
             words.add(cleaned)
     return words
@@ -25,11 +25,9 @@ def extract_keywords(text: str) -> set:
 def semantic_similarity_score(doc_content: str, question_keywords: set) -> float:
     if not question_keywords:
         return 0.0
-    
-    # find how many question keywords appear in the document
+
     doc_keywords = extract_keywords(doc_content)
     overlap = len(question_keywords & doc_keywords)
-    # return a score between 0 and 1 (1 means all keywords matched)
     return overlap / len(question_keywords)
 
 
@@ -37,36 +35,80 @@ def semantic_similarity_score(doc_content: str, question_keywords: set) -> float
 def rank_documents(docs: list, question: str) -> list:
     if not docs:
         return docs
-    
-    # get question keywords once so we dont re-compute for every document
+
     question_keywords = extract_keywords(question)
-    
-    # score each document based on how relevant it is
     scored_docs = [
         (doc, semantic_similarity_score(doc.page_content, question_keywords))
         for doc in docs
     ]
-    
-    # sort highest score first
     scored_docs.sort(key=lambda x: x[1], reverse=True)
-    return [doc for doc, _ in scored_docs]
+
+    filtered_docs = [
+        doc for doc, score in scored_docs
+        if score >= settings.RETRIEVER_MIN_SCORE
+    ]
+    return filtered_docs or [doc for doc, _ in scored_docs[: max(1, min(3, len(scored_docs)))]]
+
+
+def _deduplicate_docs(docs: list) -> list:
+    unique_docs = []
+    seen = set()
+    for doc in docs:
+        key = (
+            doc.metadata.get("chunk_id"),
+            doc.metadata.get("page"),
+            doc.page_content[:200],
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_docs.append(doc)
+    return unique_docs
+
+
+def _build_context(top_docs: list) -> str:
+    context_parts = []
+    current_size = 0
+
+    for i, doc in enumerate(top_docs, 1):
+        page_info = doc.metadata.get("page", "N/A")
+        source_file = doc.metadata.get("source", "Unknown")
+        content = " ".join(doc.page_content.split())
+        remaining = max(settings.MAX_CONTEXT_CHARS - current_size, 0)
+        if remaining <= 0:
+            break
+
+        limited_content = content[: min(850, remaining)]
+        part = f"[Source {i} | File: {source_file} | Page: {page_info}]\n{limited_content}"
+        context_parts.append(part)
+        current_size += len(part) + 8
+
+    return "\n\n---\n\n".join(context_parts)
+
+
+def _page_number(doc) -> int:
+    page = doc.metadata.get("page", 1)
+    if isinstance(page, int):
+        return page
+    if isinstance(page, str) and page.isdigit():
+        return int(page)
+    return 1
 
 
 # this is the main function that answers a student's question using their uploaded PDFs
 def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int = 3, chat_history: list = None):
-    # create a search tool from our vector database
-    retriever = get_retriever(vectorstore)
+    started_at = time.perf_counter()
+    desired_k = 4 if marks <= 3 else 5 if marks <= 5 else settings.TOP_K
+    retriever = get_retriever(vectorstore, desired_k=desired_k)
 
-    # STEP 1: search for relevant content in the uploaded PDFs
-    # if syllabus is provided, add a hint from it to improve search results
     search_query = question
     if syllabus_context and len(syllabus_context) > 20:
         search_query = f"{syllabus_context[:100]} {question}"
-    
-    # run the actual search
-    docs = retriever.invoke(search_query)
 
-    # if nothing was found, tell the student
+    retrieval_started = time.perf_counter()
+    docs = retriever.invoke(search_query)
+    logger.info("Retriever returned %s docs in %.2fs", len(docs), time.perf_counter() - retrieval_started)
+
     if not docs:
         return {
             "answer": f"I couldn't find relevant information about '{question}' in the uploaded documents.",
@@ -75,8 +117,7 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
             "error": True
         }
 
-    # STEP 2: re-rank the results so the best matches come first
-    ranked_docs = rank_documents(docs, question)
+    ranked_docs = _deduplicate_docs(rank_documents(docs, question))
     if not ranked_docs:
         return {
             "answer": f"I couldn't find relevant information about '{question}' in the uploaded documents after ranking.",
@@ -85,41 +126,22 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
             "error": True
         }
 
-    # STEP 3: take only the top documents to keep things fast (use TOP_K from settings)
-    top_docs = ranked_docs[:settings.TOP_K]
-    
-    # build the context string that will be sent to the AI
-    context_parts = []
-    for i, doc in enumerate(top_docs, 1):
-        page_info = doc.metadata.get("page", "N/A")
-        source_file = doc.metadata.get("source", "Unknown")
-        # get just the filename, not the full path
-        if isinstance(source_file, str):
-            source_file = source_file.split("/")[-1].split("\\")[-1]
-        # limit each document to 800 characters to prevent super long prompts
-        content = doc.page_content[:800] if len(doc.page_content) > 800 else doc.page_content
-        context_parts.append(f"[Source {i} - {source_file}, Page {page_info}]\n{content}")
-    
-    # join all document chunks with separators
-    context = "\n\n---\n\n".join(context_parts)
+    top_docs = ranked_docs[: settings.TOP_K]
+    context = _build_context(top_docs)
 
-    # STEP 4: format the chat history so the AI remembers previous messages
     formatted_chat_history = "No previous conversation."
     if chat_history and len(chat_history) > 0:
-        # only keep the last MAX_CHAT_HISTORY messages to save processing time
         recent_history = chat_history[-settings.MAX_CHAT_HISTORY:] if len(chat_history) > settings.MAX_CHAT_HISTORY else chat_history
         history_parts = []
         for msg in recent_history:
-            role = "Student" if msg["role"] == "user" else "Tutor"
-            # shorten long messages to keep things manageable
-            content = msg["content"][:300] + "..." if len(msg["content"]) > 300 else msg["content"]
+            role = "Student" if msg.get("role") == "user" else "Tutor"
+            content = msg.get("content", "")
+            content = content[:300] + "..." if len(content) > 300 else content
             history_parts.append(f"{role}: {content}")
         formatted_chat_history = "\n".join(history_parts)
 
-    # STEP 5: put everything together into the final prompt and send to AI
     formatted_syllabus = syllabus_context.strip() if syllabus_context else "No syllabus provided."
-    
-    # fill in the prompt template with all our data
+
     prompt = RAG_PROMPT.format(
         syllabus_context=formatted_syllabus,
         marks=marks,
@@ -128,14 +150,13 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
         chat_history=formatted_chat_history
     )
 
-    # send to Gemini AI and get the answer
     try:
-        logger.info(f"Sending RAG request with {len(context)} chars context and marks={marks}")
+        logger.info("Sending RAG request with %s chars context and marks=%s", len(context), marks)
         response = generate_text(prompt)
         if not response:
             raise ValueError("Empty response from Gemini")
     except Exception as e:
-        logger.error(f"Error generating response: {str(e)}")
+        logger.error("Error generating response: %s", e)
         return {
             "answer": f"Error generating response. Please try again: {str(e)[:100]}",
             "pages": [],
@@ -143,17 +164,16 @@ def run_rag(question: str, vectorstore, syllabus_context: str = "", marks: int =
             "error": True
         }
 
-    # STEP 6: collect page numbers and source info for the student to verify
-    pages = sorted({str(doc.metadata.get("page", "N/A")) for doc in top_docs})
+    pages = sorted({str(_page_number(doc)) for doc in top_docs}, key=int)
     sources = [
         {
-            "page": doc.metadata.get("page", "N/A"),
-            "text": doc.page_content[:200]  # short preview of what was found
+            "page": _page_number(doc),
+            "text": doc.page_content[:200]
         }
         for doc in top_docs
     ]
 
-    # return the complete answer with sources
+    logger.info("RAG completed in %.2fs", time.perf_counter() - started_at)
     return {
         "answer": response,
         "pages": pages,

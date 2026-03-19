@@ -582,3 +582,6 @@ MIT License allows free, private, commercial use with proper attribution.
 [⬆ Back to Top](#📚-studymind-ai-intelligent-pdf-learning-assistant)
 
 </div>
+
+
+pdf chli gai tutorial per jake study tool per wapas ane ke bad.

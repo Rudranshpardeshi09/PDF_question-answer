@@ -1,12 +1,14 @@
 # this file handles the question-answering API endpoint
+import asyncio
+import logging
+import os
+
 from fastapi import APIRouter, HTTPException
+
 from app.api.schemas.qa import QARequest, QAResponse
+from app.core.config import settings
 from app.services.rag_service import run_rag
 from app.vectorstore.faiss_store import load_vectorstore
-import os
-# importing settings separately as it might be used differently
-from app.core.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 # creating a router for all QA related endpoints
@@ -53,7 +55,7 @@ async def ask_question(request: QARequest):
         
         # try to load our search database
         try:
-            vectorstore = load_vectorstore()
+            vectorstore = await asyncio.to_thread(load_vectorstore)
         except Exception as e:
             error_msg = f"Failed to load vectorstore: {str(e)}"
             logger.error(error_msg)
@@ -76,7 +78,8 @@ async def ask_question(request: QARequest):
         
         # run the RAG pipeline to get the answer
         try:
-            result = run_rag(
+            result = await asyncio.to_thread(
+                run_rag,
                 question=request.question.strip(),
                 vectorstore=vectorstore,
                 syllabus_context=request.syllabus_context or "",

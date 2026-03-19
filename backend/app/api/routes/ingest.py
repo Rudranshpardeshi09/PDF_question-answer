@@ -7,6 +7,7 @@ from urllib.parse import unquote
 from concurrent.futures import ThreadPoolExecutor
 from app.services.ingestion_service import ingest_pdf
 from app.core.config import settings
+from app.utils.file_utils import ensure_safe_child_path, sanitize_filename, save_upload_file
 import threading
 
 logger = logging.getLogger(__name__)
@@ -104,44 +105,33 @@ async def ingest(background_tasks: BackgroundTasks, file: UploadFile = File(...)
         raise HTTPException(status_code=400, detail="No file provided")
     
     # validate file extension (case-insensitive)
-    file_lower = file.filename.lower()
+    safe_filename = sanitize_filename(file.filename)
+    file_lower = safe_filename.lower()
     file_ext = os.path.splitext(file_lower)[1]
     if file_ext not in settings.ALLOWED_FILE_EXTENSIONS:
         raise HTTPException(
             status_code=400, 
             detail=f"Only {', '.join(settings.ALLOWED_FILE_EXTENSIONS)} files allowed"
         )
-    
-    # validate file size before saving (prevent huge uploads)
-    try:
-        file.file.seek(0, 2)  # seek to end
-        file_size = file.file.tell()
-        file.file.seek(0)  # reset to beginning
-        
-        if file_size > settings.MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413, 
-                detail=f"File size exceeds {settings.MAX_FILE_SIZE / (1024*1024):.0f}MB limit"
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error validating file size: {e}")
-        raise HTTPException(status_code=400, detail="Invalid file")
-
+    if file.content_type and file.content_type not in settings.ALLOWED_FILE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type"
+        )
     # save the uploaded file to disk
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    file_path = ensure_safe_child_path(UPLOAD_DIR, safe_filename)
     try:
-        with open(file_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+        save_upload_file(file, file_path)
     except Exception as e:
-        logger.error(f"Failed to save file {file.filename}: {e}")
+        logger.error(f"Failed to save file {safe_filename}: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail="Failed to save file")
 
     # set initial status to pending (so frontend knows we got the file) - use lock for thread safety
     with _status_lock:
-        if file.filename not in INGESTION_STATUS or INGESTION_STATUS[file.filename]["status"] not in ("pending", "processing"):
-            INGESTION_STATUS[file.filename] = {
+        if safe_filename not in INGESTION_STATUS or INGESTION_STATUS[safe_filename]["status"] not in ("pending", "processing"):
+            INGESTION_STATUS[safe_filename] = {
                 "status": "pending",
                 "pages": 0,
                 "chunks": 0,
@@ -152,13 +142,13 @@ async def ingest(background_tasks: BackgroundTasks, file: UploadFile = File(...)
     background_tasks.add_task(
         ingest_background,
         file_path,
-        file.filename
+        safe_filename
     )
 
     # tell the frontend we got the file and started processing
     return {
         "status": "accepted",
-        "filename": file.filename,
+        "filename": safe_filename,
         "message": "PDF upload received. Processing started."
     }
 
@@ -170,7 +160,7 @@ async def ingest_status(filename: str | None = None):
     with _status_lock:
         # if a specific filename is given, return just that files status
         if filename:
-            decoded = unquote(filename)
+            decoded = sanitize_filename(unquote(filename))
             return INGESTION_STATUS.get(decoded, {"status": "not_found"})
         # otherwise return all statuses (make a copy to avoid external modifications)
         return dict(INGESTION_STATUS)
@@ -181,7 +171,8 @@ async def ingest_status(filename: str | None = None):
 async def delete_pdf(background_tasks: BackgroundTasks, filename: str):
     # decode the filename in case it has special characters like spaces
     decoded_filename = unquote(filename)
-    pdf_path = os.path.join(UPLOAD_DIR, decoded_filename)
+    safe_filename = sanitize_filename(decoded_filename)
+    pdf_path = ensure_safe_child_path(UPLOAD_DIR, safe_filename)
 
     # check if the file actually exists
     if not os.path.exists(pdf_path):
@@ -191,18 +182,18 @@ async def delete_pdf(background_tasks: BackgroundTasks, filename: str):
         # delete the actual file from disk
         os.remove(pdf_path)
     except Exception as e:
-        logger.error(f"Failed to delete file {decoded_filename}: {e}")
+        logger.error(f"Failed to delete file {safe_filename}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete file")
     
     # remove it from our status tracking (with thread safety)
     with _status_lock:
-        INGESTION_STATUS.pop(decoded_filename, None)
+        INGESTION_STATUS.pop(safe_filename, None)
     
     # rebuild the search database in the background (so the response is instant)
     background_tasks.add_task(rebuild_vectorstore_background)
 
     # respond immediately - the database rebuild happens in background
-    return {"status": "deleted", "filename": decoded_filename}
+    return {"status": "deleted", "filename": safe_filename}
 
 
 # API endpoint to delete ALL uploaded PDFs and reset everything

@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 class Settings:
     # the API key for Google Gemini AI - required for generating answers
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
+    # allow pinning a stable Gemini model instead of probing on every boot
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     # where we store our vector database on disk
     VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "app/data/vector_db")
     
@@ -20,11 +22,19 @@ class Settings:
         logger.warning("GEMINI_API_KEY not set in environment variables")
     
     # how big each text chunk should be when splitting PDFs (in characters)
-    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
+    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "900"))
     # how much overlap between chunks so we dont lose context at boundaries
-    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "200"))
+    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "150"))
     # how many search results to return when looking for relevant content
-    TOP_K: int = int(os.getenv("TOP_K", "8"))
+    TOP_K: int = int(os.getenv("TOP_K", "6"))
+    # how many candidates to fetch before reranking
+    RETRIEVER_FETCH_K: int = int(os.getenv("RETRIEVER_FETCH_K", "18"))
+    # max number of context characters sent to the LLM
+    MAX_CONTEXT_CHARS: int = int(os.getenv("MAX_CONTEXT_CHARS", "4800"))
+    # minimum lexical relevance score before a chunk is considered trustworthy
+    RETRIEVER_MIN_SCORE: float = float(os.getenv("RETRIEVER_MIN_SCORE", "0.08"))
+    # batch size for embedding requests
+    EMBEDDING_BATCH_SIZE: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
     
     # check if we are in development or production mode
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
