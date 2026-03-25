@@ -134,7 +134,7 @@ def _build_model(model_name: str):
 
 
 # this sends a prompt to Gemini and gets back the AI's response
-def generate_text(prompt: str, temperature: float = 0.3, max_tokens: int = 4096) -> str:
+def generate_text(prompt: str, temperature: float = 0.3, max_tokens: int = 4096, response_mime_type: str | None = None) -> str:
     if not prompt or not isinstance(prompt, str):
         raise ValueError("Prompt must be a non-empty string")
 
@@ -163,14 +163,18 @@ def generate_text(prompt: str, temperature: float = 0.3, max_tokens: int = 4096)
         for attempt in range(2):
             started_at = time.perf_counter()
             try:
+                config_kwargs = {
+                    "temperature": temperature,
+                    "max_output_tokens": max_tokens,
+                    "candidate_count": 1,
+                }
+                if response_mime_type:
+                    config_kwargs["response_mime_type"] = response_mime_type
+
                 response = model.generate_content(
                     prompt,
                     safety_settings=safety_settings,
-                    generation_config={
-                        "temperature": temperature,
-                        "max_output_tokens": max_tokens,
-                        "candidate_count": 1,
-                    }
+                    generation_config=genai.GenerationConfig(**config_kwargs)
                 )
 
                 if not response or not getattr(response, "text", "").strip():

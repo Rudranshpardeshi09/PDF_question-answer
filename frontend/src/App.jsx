@@ -5,6 +5,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import Home from "./pages/Home";
+import MindMap from "./pages/MindMap";
 import Tutorial from "./pages/Tutorial";
 
 export default function App() {
@@ -22,8 +23,8 @@ export default function App() {
 
           {/* main content area - grows to fill space between nav and footer */}
           <main className="flex-1 min-h-0 overflow-hidden">
-            {/* show the study tool page or tutorial page based on navigation */}
             {currentPage === "home" && <Home />}
+            {currentPage === "mindmap" && <MindMap />}
             {currentPage === "tutorial" && <Tutorial />}
           </main>
 

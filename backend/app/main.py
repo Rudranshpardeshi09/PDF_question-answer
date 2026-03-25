@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # importing our API route handlers
-from app.api.routes import ingest, qa, syllabus
+from app.api.routes import ingest, qa, syllabus, mindmap
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,3 +45,4 @@ async def validation_exception_handler(request, exc):
 app.include_router(ingest.router)   # handles PDF upload and processing
 app.include_router(qa.router)       # handles question answering
 app.include_router(syllabus.router) # handles syllabus upload and parsing
+app.include_router(mindmap.router)  # handles mind map generation

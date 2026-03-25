@@ -159,3 +159,32 @@ export const deletePDF = (filename) => {
 
 // deletes ALL PDFs and resets everything
 export const resetPDFs = () => api.delete("/ingest/reset");
+
+// ============ MIND MAP API ============
+
+// generates a mind map from the given source and settings
+export const generateMindMap = (params) => {
+  if (!params) return Promise.reject(new Error("Parameters required"));
+  return api.post("/mindmap/generate", params);
+};
+
+// extracts chapter/topic structure from an already-uploaded document
+export const getDocumentStructure = (filename) => {
+  if (!filename) return Promise.reject(new Error("Filename required"));
+  return api.get(`/mindmap/structure/${encodeURIComponent(filename)}`);
+};
+
+// gets list of all saved mind maps (metadata only)
+export const getMindMapHistory = () => api.get("/mindmap/history");
+
+// gets a specific saved mind map with full tree data
+export const getMindMap = (id) => {
+  if (!id) return Promise.reject(new Error("Mind map ID required"));
+  return api.get(`/mindmap/${encodeURIComponent(id)}`);
+};
+
+// deletes a saved mind map
+export const deleteMindMap = (id) => {
+  if (!id) return Promise.reject(new Error("Mind map ID required"));
+  return api.delete(`/mindmap/${encodeURIComponent(id)}`);
+};

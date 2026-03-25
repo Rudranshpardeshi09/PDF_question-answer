@@ -1,0 +1,60 @@
+{
+  "id": "b48760636fab",
+  "title": "System Error Logs",
+  "source": "Pasted Text",
+  "created_at": "2026-03-25T17:44:58.030948+00:00",
+  "mindmap": {
+    "title": "System Error Logs",
+    "description": "This document contains technical logs regarding system failures. It details errors encountered while trying to load or generate content.",
+    "children": [
+      {
+        "title": "Resource Loading Errors",
+        "description": "The system failed to load the resource for unit 1.pdf. This resulted in a 400 Bad Request status from the server.",
+        "children": [
+          {
+            "title": "Unit 1 PDF Failure",
+            "description": "The server responded with a bad request status for this specific file. It could not be accessed at the provided URL.",
+            "children": []
+          },
+          {
+            "title": "Load Structure Failure",
+            "description": "The function loadStructure failed within the MindMapControls file. It was triggered at line 79 of the JavaScript code.",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Generation Failures",
+        "description": "The process to generate a mind map failed to complete. This error occurred at the generation endpoint of the server.",
+        "children": [
+          {
+            "title": "MindMap Generation Error",
+            "description": "The request to generate content failed with a status code 400. This prevented the mind map from being created.",
+            "children": []
+          },
+          {
+            "title": "File Execution Error",
+            "description": "The error was caught in the MindMap.jsx file at line 41. It indicates an asynchronous operation failed to execute properly.",
+            "children": []
+          }
+        ]
+      },
+      {
+        "title": "Technical Status Details",
+        "description": "The logs report a specific AxiosError during the request process. Every recorded failure returned a status code of 400.",
+        "children": [
+          {
+            "title": "Bad Request Status",
+            "description": "The server returned a 400 error for all attempted actions. This usually means the request sent by the client was invalid.",
+            "children": []
+          },
+          {
+            "title": "Axios Library Errors",
+            "description": "The system used the Axios library to make web requests. These requests failed to reach or be processed by the server.",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

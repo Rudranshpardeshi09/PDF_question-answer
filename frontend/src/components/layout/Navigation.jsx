@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, GraduationCap, Sparkles, Menu, X } from "lucide-react";
+import { BookOpen, GraduationCap, Network, Sparkles, Menu, X } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Navigation({ currentPage, onNavigate }) {
@@ -8,6 +8,7 @@ export default function Navigation({ currentPage, onNavigate }) {
 
   const navItems = [
     { id: "home", label: "Study Tool", icon: BookOpen },
+    { id: "mindmap", label: "Mind Map", icon: Network },
     { id: "tutorial", label: "Tutorial", icon: GraduationCap },
   ];
 

@@ -22,3 +22,6 @@ pdfplumber
 langchain-community
 langchain-huggingface
 google-generativeai
+
+Pillow
+pytesseract
