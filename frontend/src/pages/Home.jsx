@@ -1,26 +1,24 @@
-// this is the main study tool page with 3 panels: upload, study settings, and chat
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, FileCheck, MessageCircle } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import UploadPDF from "@/components/upload/UploadPDF";
 import ChatWindow from "@/components/chat/ChatWindow";
 import StudyPanel from "@/components/study/StudyPanel";
 import MobileChatDrawer from "@/components/chat/MobileChatDrawer";
-import { MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useApp } from "@/context/AppContext";
 
-// animation settings for the container - children appear one by one
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,  // each child appears 0.1s after the previous one
+      staggerChildren: 0.1,
       delayChildren: 0.1,
     },
   },
 };
 
-// animation settings for each panel - slides up and fades in
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -30,33 +28,70 @@ const itemVariants = {
   },
 };
 
-export default function Home() {
-  // tracks whether the mobile chat drawer is open or closed
+function StudyWorkspaceCard({ onNavigate }) {
+  const { completedFiles } = useApp();
+
+  return (
+    <div className="h-full rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-neon-500/30 dark:bg-neutral-950">
+      <div className="flex h-full flex-col gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600 dark:text-neon-300">
+            Study Workspace
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-white">
+            Ask from uploaded material
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-neutral-400">
+            Your shared uploads are already indexed here. Adjust the answer length, optionally add syllabus context, and ask focused questions from the same documents you uploaded on the landing page.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/20 dark:text-emerald-300">
+          <div className="flex items-center gap-2 font-semibold">
+            <FileCheck className="h-4 w-4" />
+            {completedFiles.length} document{completedFiles.length > 1 ? "s" : ""} ready
+          </div>
+          <p className="mt-1 text-xs leading-5">
+            {completedFiles.map((file) => file.name).join(", ")}
+          </p>
+        </div>
+
+        <div className="mt-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onNavigate("landing")}
+            className="w-full justify-center"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Landing
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Home({ onNavigate }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
     <AppLayout>
-      {/* main container fills all available space */}
       <div className="w-full h-full p-2 sm:p-3 md:p-4 overflow-hidden">
-        {/* center content with max width */}
         <motion.div
           className="w-full max-w-7xl mx-auto h-full"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          {/* responsive grid: 1 col on phone, 2 on tablet, 3 on desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 sm:gap-3 md:gap-4 h-full">
-
-            {/* left panel - where users upload their PDF files */}
             <motion.div
               className="col-span-1 lg:col-span-3 h-full min-h-0 overflow-hidden"
               variants={itemVariants}
             >
-              <UploadPDF />
+              <StudyWorkspaceCard onNavigate={onNavigate} />
             </motion.div>
 
-            {/* center panel - study settings like marks and syllabus */}
             <motion.div
               className="col-span-1 lg:col-span-3 h-full min-h-0 overflow-hidden"
               variants={itemVariants}
@@ -64,7 +99,6 @@ export default function Home() {
               <StudyPanel />
             </motion.div>
 
-            {/* right panel - chat window (only visible on desktop, hidden on mobile) */}
             <motion.div
               className="hidden lg:block lg:col-span-6 h-full min-h-0 overflow-hidden"
               variants={itemVariants}
@@ -75,9 +109,8 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* floating chat button that appears on mobile and tablet */}
       <motion.button
-        className="lg:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full 
+        className="lg:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full
                    bg-gradient-to-br from-blue-600 to-indigo-600 dark:from-neon-500 dark:to-neon-600
                    text-white shadow-lg hover:shadow-xl
                    dark:shadow-neon/30 dark:hover:shadow-neon
@@ -91,11 +124,9 @@ export default function Home() {
         transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
       >
         <MessageCircle className="w-6 h-6" />
-        {/* pulsing ring effect to draw attention */}
         <span className="absolute inset-0 rounded-full bg-blue-500 dark:bg-neon-500 animate-ping opacity-25" />
       </motion.button>
 
-      {/* slide-up chat drawer for mobile users */}
       <AnimatePresence>
         {isChatOpen && (
           <MobileChatDrawer onClose={() => setIsChatOpen(false)} />

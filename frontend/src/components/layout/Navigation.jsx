@@ -1,13 +1,22 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, GraduationCap, Network, Sparkles, Menu, X } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  LayoutDashboard,
+  Network,
+  Sparkles,
+  Menu,
+  X,
+} from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Navigation({ currentPage, onNavigate }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { id: "home", label: "Study Tool", icon: BookOpen },
+    { id: "landing", label: "Overview", icon: LayoutDashboard },
+    { id: "study", label: "Study Tool", icon: BookOpen },
     { id: "mindmap", label: "Mind Map", icon: Network },
     { id: "tutorial", label: "Tutorial", icon: GraduationCap },
   ];
@@ -29,9 +38,10 @@ export default function Navigation({ currentPage, onNavigate }) {
         <div className="flex items-center justify-between h-14 sm:h-16 md:h-18">
           {/* Logo/Title */}
           <motion.div
-            className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
+            className="flex items-center gap-2 sm:gap-3 flex-shrink-0 cursor-pointer"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => handleNavClick("landing")}
           >
             <motion.div
               className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-neon-500 dark:to-neon-600"

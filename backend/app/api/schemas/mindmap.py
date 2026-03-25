@@ -55,6 +55,7 @@ class MindMapNode(BaseModel):
     """a single node in the mind map tree"""
     title: str
     description: str = ""
+    bullet_points: list[str] = Field(default_factory=list)
     children: list["MindMapNode"] = Field(default_factory=list)
 
 

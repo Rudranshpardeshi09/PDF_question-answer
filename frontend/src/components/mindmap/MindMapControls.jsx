@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
-  Upload,
   BookOpen,
   Layers,
   Target,
@@ -15,7 +14,8 @@ import {
   Type,
   AlertCircle,
 } from "lucide-react";
-import { getIngestStatus, getDocumentStructure, generateMindMap } from "@/api/client";
+import { getDocumentStructure } from "@/api/client";
+import { useApp } from "@/context/AppContext";
 
 const MODE_OPTIONS = [
   { id: "full", label: "Full Document", icon: BookOpen, desc: "Complete mind map" },
@@ -24,9 +24,9 @@ const MODE_OPTIONS = [
 ];
 
 export default function MindMapControls({ onGenerate, isGenerating }) {
+  const { completedFileNames } = useApp();
   // source selection
   const [sourceType, setSourceType] = useState("uploaded_pdf");
-  const [availableFiles, setAvailableFiles] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [textContent, setTextContent] = useState("");
 
@@ -40,21 +40,10 @@ export default function MindMapControls({ onGenerate, isGenerating }) {
   // errors
   const [error, setError] = useState("");
 
-  // load available files from ingest status (shared with RAG system)
   useEffect(() => {
-    const loadFiles = async () => {
-      try {
-        const res = await getIngestStatus();
-        const files = Object.entries(res.data || {})
-          .filter(([, status]) => status.status === "completed")
-          .map(([filename]) => filename);
-        setAvailableFiles(files);
-      } catch (e) {
-        console.error("Failed to load file list:", e);
-      }
-    };
-    loadFiles();
-  }, []);
+    if (sourceType !== "uploaded_pdf") return;
+    setSelectedFiles(completedFileNames);
+  }, [completedFileNames, sourceType]);
 
   // load document structure when file selected and mode needs it
   useEffect(() => {
@@ -183,16 +172,16 @@ export default function MindMapControls({ onGenerate, isGenerating }) {
               <label className="text-xs font-semibold text-gray-500 dark:text-neutral-500 uppercase tracking-wider mb-2 block">
                 Select Files
               </label>
-              {availableFiles.length === 0 ? (
+              {completedFileNames.length === 0 ? (
                 <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 flex items-start gap-2">
-                  <Upload className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-amber-700 dark:text-amber-400">
-                    No files uploaded yet. Upload PDFs in the Study Tool page first.
+                    No shared documents are ready yet. Upload and process a file on the landing page first.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {availableFiles.map((fname) => (
+                  {completedFileNames.map((fname) => (
                     <label
                       key={fname}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-150 text-xs

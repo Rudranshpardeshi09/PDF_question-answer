@@ -10,19 +10,15 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.config import settings
+from app.rag.prompts import build_mindmap_generation_prompt
 from app.services.gemini_llm import generate_text
 
 logger = logging.getLogger(__name__)
 
-# where uploaded documents live (shared with RAG system)
 UPLOAD_DIR = "app/data/uploads"
-# where we store saved mind maps
 MINDMAP_DIR = "app/data/mindmaps"
 os.makedirs(MINDMAP_DIR, exist_ok=True)
 
-# in-memory cache for extracted document structures
-# keyed by (filename, file_mtime) so it auto-invalidates when file changes
 _structure_cache: dict[tuple[str, float], dict] = {}
 
 
@@ -30,7 +26,6 @@ def _get_uploaded_file_path(filename: str) -> str:
     """resolves a filename to its full path in the shared uploads folder"""
     safe_name = os.path.basename(filename)
     path = os.path.join(UPLOAD_DIR, safe_name)
-    # security: make sure the resolved path is still inside UPLOAD_DIR
     abs_path = os.path.abspath(path)
     abs_upload = os.path.abspath(UPLOAD_DIR)
     if os.path.commonpath([abs_path, abs_upload]) != abs_upload:
@@ -48,7 +43,6 @@ def _load_text_from_file(filepath: str) -> str:
     if not documents:
         raise ValueError(f"Could not extract text from {os.path.basename(filepath)}")
 
-    # combine all pages into one text block
     texts = []
     for doc in documents:
         content = doc.page_content.strip()
@@ -63,10 +57,7 @@ def get_text_from_sources(
     source_filenames: list[str] | None = None,
     text_content: str | None = None,
 ) -> tuple[str, str]:
-    """
-    gets text content from the specified source
-    returns (text, source_label) tuple
-    """
+    """gets text content from the specified source and returns (text, source_label)"""
     if source_type == "text":
         if not text_content or not text_content.strip():
             raise ValueError("Text content is required")
@@ -92,23 +83,16 @@ def get_text_from_sources(
 
 
 def extract_document_structure(filename: str) -> dict:
-    """
-    extracts chapter/topic hierarchy from a document using LLM
-    results are cached per file to avoid re-parsing
-    """
+    """extracts chapter/topic hierarchy from a document using LLM"""
     filepath = _get_uploaded_file_path(filename)
     file_mtime = os.path.getmtime(filepath)
     cache_key = (filename, file_mtime)
 
-    # return cached result if available
     if cache_key in _structure_cache:
         logger.info("Returning cached structure for %s", filename)
         return _structure_cache[cache_key]
 
-    # load the document text
     text = _load_text_from_file(filepath)
-
-    # use a limited portion to save tokens (first ~8000 chars usually contains TOC/structure)
     text_for_structure = text[:8000]
 
     prompt = f"""Analyze this document text and extract its hierarchical structure.
@@ -143,92 +127,107 @@ Rules:
 
     try:
         response = generate_text(
-            prompt, 
-            temperature=0.1, 
-            max_tokens=8192, 
-            response_mime_type="application/json"
+            prompt,
+            temperature=0.1,
+            max_tokens=8192,
+            response_mime_type="application/json",
         )
-        # extract JSON from response
-        json_match = re.search(r'\{[\s\S]*\}', response)
+        json_match = re.search(r"\{[\s\S]*\}", response)
         if not json_match:
             raise ValueError(f"No JSON found in LLM response. Response: {response[:200]}...")
 
         structure = json.loads(json_match.group())
-
         result = {
             "filename": filename,
-            "chapters": structure.get("chapters", [])
+            "chapters": structure.get("chapters", []),
         }
 
-        # cache the result
         _structure_cache[cache_key] = result
         logger.info("Extracted structure for %s: %d chapters", filename, len(result["chapters"]))
         return result
 
-    except json.JSONDecodeError as e:
-        logger.error("Failed to parse structure JSON: %s", e)
+    except json.JSONDecodeError as error:
+        logger.error("Failed to parse structure JSON: %s", error)
         raise ValueError("Failed to extract document structure. Please try again.")
-    except Exception as e:
-        logger.error("Error extracting structure from %s: %s", filename, e)
+    except Exception as error:
+        logger.error("Error extracting structure from %s: %s", filename, error)
         raise
 
 
-def _build_mindmap_prompt(text: str, mode: str, chapter: str = None, topic: str = None) -> str:
-    """builds the LLM prompt for generating the mind map based on mode and filters"""
+def _truncate_source_text(text: str, mode: str) -> str:
+    """trims source text to a focused, token-efficient window"""
+    max_chars = 6500
+    if mode == "chapter":
+        max_chars = 5200
+    elif mode == "topic":
+        max_chars = 3600
+    return text[:max_chars]
 
-    # limit text to avoid token overflow
-    max_chars = 6000
-    if mode == "topic":
-        max_chars = 3000
-    elif mode == "chapter":
-        max_chars = 5000
 
-    trimmed_text = text[:max_chars]
+def _normalize_description(value: str) -> str:
+    """keeps descriptions compact and readable for rendering"""
+    cleaned = " ".join((value or "").split())
+    if not cleaned:
+        return (
+            "Summarizes a key idea from the uploaded material. "
+            "Highlights why the concept matters in context."
+        )
+    if len(cleaned) > 220:
+        cleaned = cleaned[:217].rstrip(" ,;:") + "..."
+    return cleaned
 
-    focus_instruction = ""
-    if mode == "chapter" and chapter:
-        focus_instruction = f"\nFOCUS ONLY on the chapter/section: \"{chapter}\"\nIgnore content not related to this chapter."
-    elif mode == "topic" and topic:
-        focus_instruction = f"\nFOCUS ONLY on the specific topic: \"{topic}\"\nGo deeper into this topic with more detailed subtopics."
 
-    prompt = f"""Generate a structured mind map from this document content.
-{focus_instruction}
+def _normalize_bullet_points(values) -> list[str]:
+    """normalizes supporting points for compact diagram rendering"""
+    if not isinstance(values, list):
+        return []
 
-Document content:
----
-{trimmed_text}
----
+    bullets: list[str] = []
+    for value in values:
+        cleaned = " ".join(str(value or "").split())
+        if not cleaned:
+            continue
+        if len(cleaned) > 60:
+            cleaned = cleaned[:57].rstrip(" ,;:") + "..."
+        bullets.append(cleaned)
+        if len(bullets) == 4:
+            break
+    return bullets
 
-Rules (STRICT):
-1. Use simple, student-friendly language
-2. For EACH node, add a 2-line explanation in the description field
-3. Include only key points — no filler
-4. Use ONLY information from the document — do NOT hallucinate
-5. Create a logical hierarchy: Main Topic → Subtopics → Details
-6. Aim for 3-6 children per node, max 3 levels deep
-7. Keep titles concise (max 50 characters)
-8. Each description must be exactly 2 short sentences
 
-Respond with ONLY valid JSON (no markdown, no explanation):
-{{
-  "title": "Main Topic Title",
-  "description": "2-line explanation of the main topic.",
-  "children": [
-    {{
-      "title": "Subtopic 1",
-      "description": "2-line explanation of subtopic 1.",
-      "children": [
-        {{
-          "title": "Detail point",
-          "description": "2-line explanation of this detail.",
-          "children": []
-        }}
-      ]
-    }}
-  ]
-}}"""
+def _sanitize_mindmap_tree(node: dict, depth: int = 0) -> dict:
+    """caps tree size and normalizes node content for performance and consistency"""
+    if not isinstance(node, dict):
+        return {
+            "title": "Untitled Topic",
+            "description": _normalize_description(""),
+            "children": [],
+        }
 
-    return prompt
+    title = " ".join(str(node.get("title", "Untitled Topic")).split())[:60].strip()
+    title = title or "Untitled Topic"
+    description = _normalize_description(str(node.get("description", "")))
+    bullet_points = _normalize_bullet_points(node.get("bullet_points", []))
+
+    child_limits = {0: 8, 1: 5, 2: 4}
+    raw_children = node.get("children", [])
+    if not isinstance(raw_children, list):
+        raw_children = []
+
+    if depth >= 3:
+        children = []
+    else:
+        children = [
+            _sanitize_mindmap_tree(child, depth + 1)
+            for child in raw_children[: child_limits.get(depth, 0)]
+        ]
+
+    return {
+        "title": title,
+        "description": description,
+        "bullet_points": bullet_points,
+        "children": children,
+    }
 
 
 def generate_mindmap(
@@ -239,61 +238,55 @@ def generate_mindmap(
     selected_chapter: str | None = None,
     selected_topic: str | None = None,
 ) -> dict:
-    """
-    generates a mind map from the given source
-    returns a complete mind map response dict ready to send to frontend
-    """
+    """generates a mind map from the given source"""
     started_at = time.perf_counter()
 
-    # step 1: get the text content
     text, source_label = get_text_from_sources(source_type, source_filenames, text_content)
-
     if not text.strip():
         raise ValueError("No text content to generate mind map from")
 
-    # step 2: if chapter/topic mode, try to filter the text
     if mode in ("chapter", "topic") and source_type == "uploaded_pdf" and source_filenames:
-        # use the first file for structure reference
         try:
-            structure = extract_document_structure(source_filenames[0])
-            # find matching content by searching for chapter/topic keywords in text
+            extract_document_structure(source_filenames[0])
             if mode == "chapter" and selected_chapter:
-                _filter_text_by_section(text, selected_chapter)
+                text = _filter_text_by_section(text, selected_chapter)
             elif mode == "topic" and selected_topic:
-                _filter_text_by_section(text, selected_topic)
-        except Exception as e:
-            logger.warning("Could not filter by structure, using full text: %s", e)
+                text = _filter_text_by_section(text, selected_topic)
+        except Exception as error:
+            logger.warning("Could not filter by structure, using full text: %s", error)
 
-    # step 3: generate the mind map via LLM
-    prompt = _build_mindmap_prompt(text, mode, selected_chapter, selected_topic)
+    prompt = build_mindmap_generation_prompt(
+        _truncate_source_text(text, mode),
+        mode,
+        selected_chapter,
+        selected_topic,
+    )
 
     try:
         response = generate_text(
-            prompt, 
-            temperature=0.2, 
+            prompt,
+            temperature=0.2,
             max_tokens=8192,
-            response_mime_type="application/json"
+            response_mime_type="application/json",
         )
 
-        # extract JSON from response
-        json_match = re.search(r'\{[\s\S]*\}', response)
+        json_match = re.search(r"\{[\s\S]*\}", response)
         if not json_match:
             raise ValueError(f"No valid JSON in LLM response. Response: {response[:200]}...")
 
-        mindmap_data = json.loads(json_match.group())
-
-        # validate minimum structure
+        mindmap_data = _sanitize_mindmap_tree(json.loads(json_match.group()))
         if "title" not in mindmap_data:
             raise ValueError("Mind map missing title")
 
-    except json.JSONDecodeError as e:
-        logger.error("Failed to parse mind map JSON: %s", e)
-        raise ValueError("Failed to generate mind map. The AI response was not valid JSON. Please try again.")
-    except Exception as e:
-        logger.error("Error generating mind map: %s", e)
+    except json.JSONDecodeError as error:
+        logger.error("Failed to parse mind map JSON: %s", error)
+        raise ValueError(
+            "Failed to generate mind map. The AI response was not valid JSON. Please try again."
+        )
+    except Exception as error:
+        logger.error("Error generating mind map: %s", error)
         raise
 
-    # step 4: save the mind map
     mindmap_id = uuid.uuid4().hex[:12]
     created_at = datetime.now(timezone.utc).isoformat()
 
@@ -305,42 +298,35 @@ def generate_mindmap(
         "mindmap": mindmap_data,
     }
 
-    # persist to disk
     _save_mindmap_to_disk(result)
 
     elapsed = time.perf_counter() - started_at
     logger.info("Mind map generated in %.2fs: %s", elapsed, result["title"])
-
     return result
 
 
 def _filter_text_by_section(text: str, section_name: str) -> str:
     """tries to extract a relevant section from the text based on name"""
-    # look for the section name in the text and grab surrounding content
     lower_text = text.lower()
     lower_section = section_name.lower()
 
     idx = lower_text.find(lower_section)
     if idx == -1:
-        return text  # section not found, return full text
+        return text
 
-    # grab ~3000 chars around the found section
     start = max(0, idx - 200)
     end = min(len(text), idx + 3000)
     return text[start:end]
 
 
-# ============ HISTORY / PERSISTENCE ============
-
 def _save_mindmap_to_disk(mindmap_data: dict):
     """saves a mind map to a JSON file"""
     filepath = os.path.join(MINDMAP_DIR, f"{mindmap_data['id']}.json")
     try:
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(mindmap_data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error("Failed to save mind map %s: %s", mindmap_data["id"], e)
-        # don't raise — the mind map was still generated successfully
+        with open(filepath, "w", encoding="utf-8") as file:
+            json.dump(mindmap_data, file, ensure_ascii=False, indent=2)
+    except Exception as error:
+        logger.error("Failed to save mind map %s: %s", mindmap_data["id"], error)
 
 
 def list_mindmaps() -> list[dict]:
@@ -354,19 +340,18 @@ def list_mindmaps() -> list[dict]:
             continue
         try:
             filepath = os.path.join(MINDMAP_DIR, fname)
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            with open(filepath, "r", encoding="utf-8") as file:
+                data = json.load(file)
             items.append({
                 "id": data.get("id", fname.replace(".json", "")),
                 "title": data.get("title", "Untitled"),
                 "source": data.get("source", "Unknown"),
                 "created_at": data.get("created_at", ""),
             })
-        except Exception as e:
-            logger.warning("Failed to read mind map file %s: %s", fname, e)
+        except Exception as error:
+            logger.warning("Failed to read mind map file %s: %s", fname, error)
 
-    # sort by creation time, newest first
-    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    items.sort(key=lambda item: item.get("created_at", ""), reverse=True)
     return items
 
 
@@ -379,10 +364,10 @@ def get_mindmap(mindmap_id: str) -> Optional[dict]:
         return None
 
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        logger.error("Failed to load mind map %s: %s", mindmap_id, e)
+        with open(filepath, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except Exception as error:
+        logger.error("Failed to load mind map %s: %s", mindmap_id, error)
         return None
 
 
@@ -398,6 +383,6 @@ def delete_mindmap(mindmap_id: str) -> bool:
         os.remove(filepath)
         logger.info("Deleted mind map: %s", mindmap_id)
         return True
-    except Exception as e:
-        logger.error("Failed to delete mind map %s: %s", mindmap_id, e)
+    except Exception as error:
+        logger.error("Failed to delete mind map %s: %s", mindmap_id, error)
         return False

@@ -1,16 +1,17 @@
 // this is the root component of the entire application
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
-import Home from "./pages/Home";
-import MindMap from "./pages/MindMap";
-import Tutorial from "./pages/Tutorial";
+import Landing from "./pages/Landing";
+
+const Home = lazy(() => import("./pages/Home"));
+const MindMap = lazy(() => import("./pages/MindMap"));
+const Tutorial = lazy(() => import("./pages/Tutorial"));
 
 export default function App() {
-  // keeps track of which page the user is on (home or tutorial)
-  const [currentPage, setCurrentPage] = useState("home");
+  const [currentPage, setCurrentPage] = useState("landing");
 
   return (
     // wrapping everything in theme and app providers for global state access
@@ -23,9 +24,18 @@ export default function App() {
 
           {/* main content area - grows to fill space between nav and footer */}
           <main className="flex-1 min-h-0 overflow-hidden">
-            {currentPage === "home" && <Home />}
-            {currentPage === "mindmap" && <MindMap />}
-            {currentPage === "tutorial" && <Tutorial />}
+            <Suspense
+              fallback={
+                <div className="h-full flex items-center justify-center text-sm text-slate-500 dark:text-neutral-400">
+                  Loading workspace...
+                </div>
+              }
+            >
+              {currentPage === "landing" && <Landing onNavigate={setCurrentPage} />}
+              {currentPage === "study" && <Home onNavigate={setCurrentPage} />}
+              {currentPage === "mindmap" && <MindMap />}
+              {currentPage === "tutorial" && <Tutorial />}
+            </Suspense>
           </main>
 
           {/* footer - stays at the bottom */}
